@@ -1,0 +1,18 @@
+#listen port
+port = 9879
+
+# leveldb path
+db = "data"
+
+# util
+log-dir = "log"
+# log level: debug | info | warn | error
+log-level = "info"
+# log format: plain | json
+log-format = "plain"
+
+# user info
+user-name = "ludete"
+password = "12345678"
+
+
