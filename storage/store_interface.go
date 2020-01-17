@@ -6,5 +6,6 @@ package storage
 // key : O + accountID + time(big endian) + denom; value : amount
 
 type DB interface {
-	UpdateTokenAmount(addr string, denom string, amount int) error
+	BuyToken(addr string, denom string, amount int) error
+	ReceiveRMB(addr string, amount int) error
 }
