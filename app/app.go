@@ -16,13 +16,18 @@ type RobotApp struct {
 	dbMutex sync.Mutex
 	db      storage.DB
 	server  *http.Server
+
+	userID   string
+	password string
 }
 
 func NewRobotApp(cfg *toml.Tree) *RobotApp {
 	dbPath := cfg.GetDefault("db", "data").(string)
 	app := &RobotApp{
-		dbMutex: sync.Mutex{},
-		db:      storage.NewDB(dbPath),
+		dbMutex:  sync.Mutex{},
+		db:       storage.NewDB(dbPath),
+		userID:   cfg.Get("user-name").(string),
+		password: cfg.Get("password").(string),
 	}
 
 	router := registerHandler(app)
@@ -38,10 +43,13 @@ func NewRobotApp(cfg *toml.Tree) *RobotApp {
 
 func registerHandler(app *RobotApp) *mux.Router {
 	route := mux.NewRouter()
+	route.HandleFunc("/", help(app)).Methods("GET")
+	route.HandleFunc("/help", help(app)).Methods("GET")
+	route.HandleFunc("/balance", queryBalance(app)).Methods("GET")
 	route.HandleFunc("/buy", buyToken(app)).Methods("POST")
 	route.HandleFunc("/withdraw", withdrawToken(app)).Methods("POST")
 	route.HandleFunc("/rewards", wechatReward(app)).Methods("POST")
-	route.HandleFunc("/balance", queryBalance(app)).Methods("GET")
+	route.HandleFunc("/advert", advert(app)).Methods("POST")
 	return route
 }
 
