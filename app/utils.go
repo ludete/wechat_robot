@@ -1,20 +1,38 @@
 package app
 
 import (
-	"encoding/json"
+	"bytes"
+	"io/ioutil"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func responseData(w http.ResponseWriter, msgType int, msg string, robotID string, toWeChatID string) error {
-	data := make(map[string]interface{})
-	data[TypeKey] = msgType
-	data[MsgKey] = msg
-	data[RobotIDKey] = robotID
-	data[ToWeChatIDKey] = toWeChatID
-	body, err := json.Marshal(data)
+//func groupURLVal(msgType int, msg string, robotID, toAccountID string) *url.Values {
+//	v := &url.Values{}
+//	v.Set(TypeKey, strconv.Itoa(msgType))
+//	v.Set(MsgKey, msg)
+//	v.Set(RobotIDKey, robotID)
+//	if msgType == 301 {
+//		v.Set("friend_wxid", toAccountID)
+//	} else {
+//		v.Set(ToWeChatIDKey, toAccountID)
+//	}
+//	return v
+//}
+
+func responseWeChat(msg []byte) {
+	//	res, err := http.PostForm("http://192.168.1.2:8073/send", *values)
+	res, err := http.Post("http://192.168.1.2:8073/send",
+		"application/x-www-form-urlencoded; Charset=UTF-8", bytes.NewBuffer(msg))
 	if err != nil {
-		return err
+		log.Error("send post request failed ...")
+		return
 	}
-	_, err = w.Write(body)
-	return err
+	bz, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Errorf("read body failed, error : %s\n", err)
+		return
+	}
+	log.Infof("receive response : %s\n", bz)
 }

@@ -43,13 +43,7 @@ func NewRobotApp(cfg *toml.Tree) *RobotApp {
 
 func registerHandler(app *RobotApp) *mux.Router {
 	route := mux.NewRouter()
-	route.HandleFunc("/", help(app)).Methods("GET")
-	route.HandleFunc("/help", help(app)).Methods("GET")
-	route.HandleFunc("/balance", queryBalance(app)).Methods("GET")
-	route.HandleFunc("/buy", buyToken(app)).Methods("POST")
-	route.HandleFunc("/withdraw", withdrawToken(app)).Methods("POST")
-	route.HandleFunc("/rewards", wechatReward(app)).Methods("POST")
-	route.HandleFunc("/advert", advert(app)).Methods("POST")
+	route.HandleFunc("/", handler(app)).Methods("POST")
 	return route
 }
 

@@ -1,68 +1,79 @@
 package app
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func receiveRMB(app *RobotApp) http.HandlerFunc {
+func handler(app *RobotApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		bz, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			responseData(w, PrivateChatType, "读取请求出错", "", "")
+		news := new(baseNews)
+		if err := news.getNewsFromRequest(r); err != nil {
 			return
 		}
+		log.Infof("typeKey : %s, sendMsgWeChatID : %s, receiveMsgWeChatID : %s, recvMsg : %s\n",
+			news.typeKey, news.sendMsgWeChatID, news.receiveMsgWeChatID, news.recvMsg)
 
-		data := make(map[string]interface{})
-		err = json.Unmarshal(bz, data)
-		if err != nil {
-			responseData(w, PrivateChatType, "解析请求出错", "", "")
-			return
+		switch news.typeKey {
+		case PrivateChatType:
+			handlerPrivateChatMsg(news)
+		case ReceiveTransferType:
+			handlerReceiveTransfer(news)
+		case GroupChatType:
+			handlerGroupChat(news)
+		case AgreeGroupInvite:
+			handlerGroupInvite(news)
+		case ReceiveAddFriendRequest:
+			handlerFriendVerify(news)
 		}
-
-		robotID := data[RobotIDKey].(string)
-		toChatID := data[ToWeChatIDKey].(string)
-		msg := data[MsgKey].(string)
-
-		//TODO. will store account state and amount to store
-
-		responseData(w, ReceiveTransferType, msg, robotID, toChatID)
 	}
 }
 
-func buyToken(app *RobotApp) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
+func handlerPrivateChatMsg(news *baseNews) {
+	var (
+		resMsg []byte
+		err    error
+	)
+	//var resMsg *url.Values
+	if news.recvMsg == HELP || news.recvMsg == "help" {
+		resMsg, err = news.groupResMsg(PrivateChatType, "help me !")
+	} else if strings.HasPrefix(news.recvMsg, BUYTOKEN) {
+		resMsg, err = news.groupResMsg(PrivateChatType, "buy token is not implement !")
+	} else {
+		resMsg, err = news.groupResMsg(PrivateChatType, "pls input help me !")
 	}
+	if err != nil {
+		log.Errorf("group response message error : %s\n", err.Error())
+		return
+	}
+	responseWeChat(resMsg)
+	//responseURLVal(resMsg)
 }
 
-func withdrawToken(app *RobotApp) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
+func handlerReceiveTransfer(news *baseNews) {
+	resMsg, err := news.groupResMsg(ResponseTransferType, news.recvMsg)
+	if err != nil {
+		log.Errorf("group response message error : %s\n", err.Error())
+		return
 	}
+	responseWeChat(resMsg)
 }
 
-func queryBalance(app *RobotApp) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func handlerGroupChat(news *baseNews) {
 
-	}
 }
 
-func wechatReward(app *RobotApp) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func handlerGroupInvite(news *baseNews) {
 
-	}
 }
 
-func help(app *RobotApp) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
+func handlerFriendVerify(news *baseNews) {
+	resMsg, err := news.groupResMsg(AgreeFriendVerify, news.recvMsg)
+	if err != nil {
+		log.Errorf("group response message error : %s\n", err.Error())
+		return
 	}
-}
-
-func advert(app *RobotApp) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-	}
+	responseWeChat(resMsg)
 }
