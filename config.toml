@@ -1,5 +1,5 @@
 #listen port
-port = 9879
+port = 5000
 
 # leveldb path
 db = "data"

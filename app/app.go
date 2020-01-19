@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ludete/wechat_robot/exchanges"
+
 	"github.com/gorilla/mux"
 	"github.com/ludete/wechat_robot/storage"
 	toml "github.com/pelletier/go-toml"
@@ -17,8 +19,11 @@ type RobotApp struct {
 	db      storage.DB
 	server  *http.Server
 
+	exchange exchanges.Exchange
+
 	userID   string
 	password string
+	advert   string
 }
 
 func NewRobotApp(cfg *toml.Tree) *RobotApp {

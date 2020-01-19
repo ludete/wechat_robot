@@ -1,5 +1,5 @@
 package exchanges
 
-type QueryMarketPrice interface {
-	QueryPrice(market string)int
+type Exchange interface {
+	QueryPrice(market string) (int, error)
 }

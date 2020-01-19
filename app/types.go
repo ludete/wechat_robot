@@ -20,13 +20,21 @@ const (
 	ResSendMsgIDKey = "robot_wxid"
 	ResReceiveIDKey = "to_wxid"
 	FriendIDKey     = "friend_wxid"
+	AtWeChatIDKey   = "at_wxid"
 )
 
 type baseNews struct {
-	recvMsg            string
-	typeKey            int
+	typeKey int
+
+	// private msg
 	sendMsgWeChatID    string
 	receiveMsgWeChatID string
+
+	// group msg
+	atWeChatID string
+	groupID    string
+
+	recvMsg string
 }
 
 func (b *baseNews) getNewsFromRequest(r *http.Request) error {
@@ -41,22 +49,23 @@ func (b *baseNews) getNewsFromRequest(r *http.Request) error {
 	b.sendMsgWeChatID = r.PostForm.Get(SendMsgIDKey)
 	b.receiveMsgWeChatID = r.PostForm.Get(ReceiveMsgIDKey)
 	b.recvMsg = r.PostForm.Get(MsgKey)
+	b.atWeChatID = r.PostForm.Get()
 	return nil
 }
 
-func (b *baseNews) groupResMsg(msgType int, resMsg string) ([]byte, error) {
+func (b *baseNews) groupResMsg(msgType int, resMsg string) []byte {
 	data := make(map[string]interface{})
 	data[TypeKey] = msgType
-	data[MsgKey] = resMsg
+	data[MsgKey] = toUnicode(resMsg)
 	data[ReceiveMsgIDKey] = b.receiveMsgWeChatID
-	if msgType == 301 {
+	if msgType == ResponseTransferType {
 		data[FriendIDKey] = b.sendMsgWeChatID
 	} else {
 		data[ResReceiveIDKey] = b.sendMsgWeChatID
 	}
 	bz, err := json.Marshal(data)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	//s, err := simplifiedchinese.GBK.NewEncoder().String(msg)
@@ -64,5 +73,5 @@ func (b *baseNews) groupResMsg(msgType int, resMsg string) ([]byte, error) {
 	//	log.Error(err)
 	//	return
 	//}
-	return bz, nil
+	return bz
 }
