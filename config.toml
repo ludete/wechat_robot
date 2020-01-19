@@ -15,4 +15,6 @@ log-format = "plain"
 user-name = "ludete"
 password = "12345678"
 
-
+# wallet info
+apikey = "bc9f49dde58089808ec2837c2efe7310"
+secretkey = "6nU95IhOWpbymIWvVibiNyfTEblfqkDD0TbXIVEfD30"
