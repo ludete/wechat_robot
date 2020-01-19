@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -20,6 +21,14 @@ import (
 type GoLevelDB struct {
 	db    *leveldb.DB
 	batch *leveldb.Batch
+}
+
+func (g *GoLevelDB) GetUserWalletKeyID(weChatID string) string {
+	panic("implement me")
+}
+
+func (g *GoLevelDB) GetUserDeomAddr(weChatID string, denom string) (string, error) {
+	panic("implement me")
 }
 
 func NewDB(config string) DB {
@@ -62,6 +71,13 @@ func calCurrBalance(remain uint64, delta int) uint64 {
 	return balance
 }
 
+func (g *GoLevelDB) BuyTokenRecord(addr string, denom string, amount int) error {
+	key := generateRecordKey(addr, BUYRECORD, denom)
+	val := make([]byte, 8)
+	binary.BigEndian.PutUint64(val, uint64(amount))
+	return g.db.Put(key, val, nil)
+}
+
 func (g *GoLevelDB) BuyToken(addr string, denom string, amount int) error {
 	balanceKey := generateBalanceKey(addr, denom)
 	balance, err := g.getUserBalance(balanceKey)
@@ -84,21 +100,44 @@ func (g *GoLevelDB) BuyToken(addr string, denom string, amount int) error {
 //key: R + addr +
 func (g *GoLevelDB) ReceiveRMB(addr string, amount int) error {
 	key := generateReceiveRMBKey(addr)
-	if len(key) == 0 {
-		log.Error("generate receiveRMBKey failed")
-		panic("generate receiveRMBKey failed")
+	total := uint64(amount)
+	// get previous store rmb
+	oldVal, err := g.db.Get(key, nil)
+	if err != leveldb.ErrNotFound {
+		log.Errorf("find wechat id : %s rmb record in db failed\n", err.Error())
+		return err
 	}
-
+	if oldVal[8] == BUYOPEN {
+		total += binary.BigEndian.Uint64(oldVal[:8])
+	}
+	// cumulative amount of rmb
 	buf := bytes.NewBuffer(nil)
 	amountVal := make([]byte, 4)
-	binary.BigEndian.PutUint64(amountVal, uint64(amount))
+	binary.BigEndian.PutUint64(amountVal, total)
 	buf.Write(amountVal)
 	buf.Write([]byte{BUYOPEN})
-	val := buf.Bytes()
-	err := g.db.Put(key, val, nil)
-	return err
+	return g.db.Put(key, buf.Bytes(), nil)
 }
 
+func (g *GoLevelDB) GetUserStoreRMB(weChatID string) (int, error) {
+	key := generateReceiveRMBKey(weChatID)
+	val, err := g.db.Get(key, nil)
+	if err != nil {
+		return -1, err
+	}
+	return strconv.Atoi(string(val[:8]))
+}
+
+func (g *GoLevelDB) ClearUserStoreRMB(waChatID string) {
+	key := generateReceiveRMBKey(waChatID)
+	g.db.Put(key, nullVal(), nil)
+}
+
+func nullVal() []byte {
+	bytes := make([]byte, 8)
+	bytes = append(bytes, BUYCLOSE)
+	return bytes
+}
 func generateReceiveRMBKey(addr string) []byte {
 	buf := bytes.NewBuffer(nil)
 	buf.Write([]byte{RECEIVERMB})

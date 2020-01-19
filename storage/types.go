@@ -11,5 +11,5 @@ const (
 
 const (
 	BUYOPEN  = 'O'
-	BUYCLOSE = "C"
+	BUYCLOSE = 'C'
 )

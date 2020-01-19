@@ -6,6 +6,10 @@ package storage
 // key : O + accountID + time(big endian) + denom; value : amount
 
 type DB interface {
-	BuyToken(addr string, denom string, amount int) error
-	ReceiveRMB(addr string, amount int) error
+	BuyTokenRecord(weChatID string, denom string, amount int) error
+	ReceiveRMB(weChatID string, amount int) error
+	GetUserStoreRMB(weChatID string) (int, error)
+	ClearUserStoreRMB(waChatID string)
+	GetUserDeomAddr(weChatID string, denom string) (string, error)
+	GetUserWalletKeyID(weChatID string) string
 }
