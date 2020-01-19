@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ludete/wechat_robot/wallets"
+
 	"github.com/ludete/wechat_robot/exchanges"
 
 	"github.com/gorilla/mux"
@@ -24,6 +26,7 @@ type RobotApp struct {
 	userID   string
 	password string
 	advert   string
+	wallet   wallets.WalletInterface
 }
 
 func NewRobotApp(cfg *toml.Tree) *RobotApp {

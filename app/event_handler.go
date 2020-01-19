@@ -18,51 +18,66 @@ func handler(app *RobotApp) http.HandlerFunc {
 
 		switch news.typeKey {
 		case PrivateChatType:
-			handlerPrivateChatMsg(news, app)
+			handlerPrivateChatMsg(news, app, responseWeChat)
 		case ReceiveTransferType:
-			handlerReceiveTransfer(news)
+			handlerReceiveTransfer(news, app, responseWeChat)
 		case GroupChatType:
 			handlerGroupChat(news, app)
 		case AgreeGroupInvite:
-			handlerGroupInvite(news)
+			handlerGroupInvite(news, responseWeChat)
 		case ReceiveAddFriendRequest:
-			handlerFriendVerify(news)
+			handlerFriendVerify(news, responseWeChat)
 		}
 	}
 }
 
-func handlerPrivateChatMsg(news *baseNews, app *RobotApp) {
+func handlerPrivateChatMsg(news *baseNews, app *RobotApp, fn func([]byte) error) {
 	var resMsg []byte
 	resMsg = news.groupResMsg(PrivateChatType, getHelpMsg(app))
 	if strings.HasPrefix(news.recvMsg, BUYTOKEN) {
-		resMsg = news.groupResMsg(PrivateChatType, "buy token is not implement !")
+		resMsg = buyTokens(app, news)
 	} else if strings.HasPrefix(news.recvMsg, QUERY) {
-		if infos := strings.Split(news.recvMsg, QUERY); len(infos) == 2 {
-			if price, err := app.exchange.QueryPrice(infos[1]); err == nil {
-				resMsg = []byte(getPriceMsg(infos[1], price))
-			}
-		}
+		resMsg = news.groupResMsg(PrivateChatType, queryTokenPrice(app, news.recvMsg))
 	}
-	responseWeChat(resMsg)
-	//var resMsg *url.Values
-	//responseURLVal(resMsg)
+	if err := Retry(3, 3, func() error {
+		return fn(resMsg)
+	}); err != nil {
+		log.Errorf("response private msg failed : %s\n", err.Error())
+		return
+	}
 }
 
-func handlerReceiveTransfer(news *baseNews) {
+func handlerReceiveTransfer(news *baseNews, app *RobotApp, fn func([]byte) error) {
 	resMsg := news.groupResMsg(ResponseTransferType, news.recvMsg)
-	responseWeChat(resMsg)
+	if err := Retry(3, 3, func() error {
+		return fn(resMsg)
+	}); err != nil {
+		log.Errorf("response receive transfer failed : %s\n", err.Error())
+		return
+	}
+	if err := app.db.ReceiveRMB(news.sendMsgWeChatID, news.typeKey); err != nil {
+		log.Errorf("store amount RMB value in db failed : %s\n", err.Error())
+	}
 }
 
 func handlerGroupChat(news *baseNews, app *RobotApp) {
 	//var resMsg []byte
 }
 
-func handlerGroupInvite(news *baseNews) {
+func handlerGroupInvite(news *baseNews, fn func([]byte) error) {
 	resMsg := news.groupResMsg(AgreeGroupInvite, news.recvMsg)
-	responseWeChat(resMsg)
+	if err := Retry(3, 3, func() error {
+		return fn(resMsg)
+	}); err != nil {
+		log.Errorf("response group invite failed : %s\n", err.Error())
+	}
 }
 
-func handlerFriendVerify(news *baseNews) {
+func handlerFriendVerify(news *baseNews, fn func([]byte) error) {
 	resMsg := news.groupResMsg(AgreeFriendVerify, news.recvMsg)
-	responseWeChat(resMsg)
+	if err := Retry(3, 3, func() error {
+		return fn(resMsg)
+	}); err != nil {
+		log.Errorf("response friend verify failed : %s\n", err.Error())
+	}
 }

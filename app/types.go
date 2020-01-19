@@ -35,6 +35,8 @@ type baseNews struct {
 	groupID    string
 
 	recvMsg string
+
+	money int
 }
 
 func (b *baseNews) getNewsFromRequest(r *http.Request) error {
@@ -49,7 +51,7 @@ func (b *baseNews) getNewsFromRequest(r *http.Request) error {
 	b.sendMsgWeChatID = r.PostForm.Get(SendMsgIDKey)
 	b.receiveMsgWeChatID = r.PostForm.Get(ReceiveMsgIDKey)
 	b.recvMsg = r.PostForm.Get(MsgKey)
-	b.atWeChatID = r.PostForm.Get()
+	b.atWeChatID = r.PostForm.Get(AtWeChatIDKey)
 	return nil
 }
 
@@ -74,4 +76,12 @@ func (b *baseNews) groupResMsg(msgType int, resMsg string) []byte {
 	//	return
 	//}
 	return bz
+}
+
+type stop struct {
+	error
+}
+
+func NoRetryError(err error) stop {
+	return stop{err}
 }

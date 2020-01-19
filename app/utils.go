@@ -2,40 +2,51 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb"
 
 	log "github.com/sirupsen/logrus"
 )
 
-//func groupURLVal(msgType int, msg string, robotID, toAccountID string) *url.Values {
-//	v := &url.Values{}
-//	v.Set(TypeKey, strconv.Itoa(msgType))
-//	v.Set(MsgKey, msg)
-//	v.Set(RobotIDKey, robotID)
-//	if msgType == 301 {
-//		v.Set("friend_wxid", toAccountID)
-//	} else {
-//		v.Set(ToWeChatIDKey, toAccountID)
-//	}
-//	return v
-//}
+func Retry(num int, sleep int, fn func() error) error {
+	if err := fn(); err != nil {
+		if num--; num > 0 {
+			return Retry(num, sleep, fn)
+		}
+		return err
+	}
+	return nil
+}
 
-func responseWeChat(msg []byte) {
+func responseWeChat(msg []byte) error {
 	//	res, err := http.PostForm("http://192.168.1.2:8073/send", *values)
 	res, err := http.Post("http://192.168.1.2:8073/send",
 		"application/x-www-form-urlencoded; Charset=UTF-8", bytes.NewBuffer(msg))
 	if err != nil {
 		log.Error("send post request failed ...")
-		return
+		return err
 	}
 	bz, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Errorf("read body failed, error : %s\n", err)
-		return
+		return nil
 	}
 	log.Infof("receive response : %s\n", bz)
+	return nil
+}
+
+func queryTokenPrice(app *RobotApp, msg string) string {
+	if denom := getCoinDenomFromMsg(msg); denom != "" {
+		if price, err := app.exchange.QueryPrice(denom); err == nil {
+			return getPriceMsg(denom, price)
+		}
+	}
+	return toUnicode("查询价格失败")
 }
 
 func getHelpMsg(app *RobotApp) string {
@@ -58,6 +69,76 @@ func getHelpMsg(app *RobotApp) string {
 	return toUnicode(helpMsg)
 }
 
+func buyTokens(app *RobotApp, news *baseNews) []byte {
+	var (
+		denom = getCoinDenomFromMsg(news.recvMsg)
+		price int
+	)
+
+	amountRMB, err := app.db.GetUserStoreRMB(news.sendMsgWeChatID)
+	if err != nil {
+		return news.groupResMsg(PrivateChatType, "未查到用户存储的资金")
+	}
+	if !checkBuyCoins(denom) {
+		log.Errorf("不支持购买改币种 : %s\n", news.recvMsg)
+		return news.groupResMsg(PrivateChatType, SupportTokens())
+	}
+
+	if err := Retry(3, 2, func() error {
+		price, err = app.exchange.QueryPrice(denom)
+		return err
+	}); err != nil {
+		log.Errorf("交易所查询币种价格失败; %s\n", err.Error())
+		return news.groupResMsg(PrivateChatType, "交易所查询币种价格失败")
+	}
+
+	tokenAmount := calRMBToTokenAmount(amountRMB, price)
+	if checkIsTooSmallToken(tokenAmount) {
+		log.Errorf("购买的币种 : %s 数量 %d 太少\n", denom, tokenAmount)
+		return news.groupResMsg(PrivateChatType, "购买的数量太少")
+	}
+
+	walletID := app.db.GetUserWalletKeyID(news.receiveMsgWeChatID)
+	toAddr, err := app.db.GetUserDeomAddr(news.sendMsgWeChatID, denom)
+	if err == leveldb.ErrNotFound {
+		err = app.wallet.SendMoney(walletID, toAddr, denom, tokenAmount)
+	}
+
+	if err := Retry(3, 3, func() error {
+		return app.wallet.SendMoney(news.receiveMsgWeChatID, news.sendMsgWeChatID, denom, tokenAmount)
+	}); err != nil {
+		log.Errorf("send %s token from %s to %s amount %d failed in wallet\n",
+			denom, news.receiveMsgWeChatID, news.sendMsgWeChatID, tokenAmount)
+		return news.groupResMsg(PrivateChatType, "购买失败")
+	}
+	app.db.ClearUserStoreRMB(news.sendMsgWeChatID)
+	app.db.BuyTokenRecord(news.sendMsgWeChatID, denom, tokenAmount)
+	return news.groupResMsg(PrivateChatType, fmt.Sprintf("购买%s成功，数量%d\n", denom, tokenAmount))
+}
+
+func SupportTokens() string {
+	support := "支持购买的币种 : " + BCH + "、" + CET
+	return support
+}
+
+func getCoinDenomFromMsg(msg string) string {
+	if infos := strings.Split(msg, ""); len(infos) == 2 {
+		return infos[1]
+	}
+	return ""
+}
+
+func calRMBToTokenAmount(rmb int, price int) int {
+	return rmb / price
+}
+
+func checkIsTooSmallToken(tokenAmount int) bool {
+	if tokenAmount < 1 {
+		return true
+	}
+	return false
+}
+
 func getPriceMsg(denom string, price int) string {
 	return toUnicode(denom + " 价格：" + strconv.Itoa(price))
 }
@@ -73,4 +154,12 @@ func toUnicode(str string) string {
 		}
 	}
 	return res
+}
+
+func checkBuyCoins(denom string) bool {
+	switch denom {
+	case BCH, CET:
+		return true
+	}
+	return false
 }
