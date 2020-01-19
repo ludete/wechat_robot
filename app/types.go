@@ -58,7 +58,7 @@ func (b *baseNews) getNewsFromRequest(r *http.Request) error {
 func (b *baseNews) groupResMsg(msgType int, resMsg string) []byte {
 	data := make(map[string]interface{})
 	data[TypeKey] = msgType
-	data[MsgKey] = toUnicode(resMsg)
+	data[MsgKey] = resMsg
 	data[ReceiveMsgIDKey] = b.receiveMsgWeChatID
 	if msgType == ResponseTransferType {
 		data[FriendIDKey] = b.sendMsgWeChatID
@@ -69,12 +69,7 @@ func (b *baseNews) groupResMsg(msgType int, resMsg string) []byte {
 	if err != nil {
 		return nil
 	}
-
-	//s, err := simplifiedchinese.GBK.NewEncoder().String(msg)
-	//if err != nil {
-	//	log.Error(err)
-	//	return
-	//}
+	bz = []byte(toUnicode(string(bz)))
 	return bz
 }
 

@@ -26,7 +26,7 @@ func Retry(num int, sleep int, fn func() error) error {
 func responseWeChat(msg []byte) error {
 	//	res, err := http.PostForm("http://192.168.1.2:8073/send", *values)
 	res, err := http.Post("http://192.168.1.2:8073/send",
-		"application/x-www-form-urlencoded; Charset=UTF-8", bytes.NewBuffer(msg))
+		"application/json; Charset=UTF-8", bytes.NewBuffer(msg))
 	if err != nil {
 		log.Error("send post request failed ...")
 		return err
@@ -66,7 +66,10 @@ func getHelpMsg(app *RobotApp) string {
 	if app != nil {
 		helpMsg += app.advert
 	}
-	return toUnicode(helpMsg)
+
+	//return url.QueryEscape(helpMsg)
+	//return toUnicode(helpMsg)
+	return helpMsg
 }
 
 func buyTokens(app *RobotApp, news *baseNews) []byte {
