@@ -52,16 +52,19 @@ func queryTokenPrice(app *RobotApp, msg string) string {
 func getHelpMsg(app *RobotApp) string {
 	helpMsg := `		--机器人沟通指南--
 		查询 - 获取币种信息； 
-			语法: 币种 bch
-		买币 - 依据当前交易所的价格，购买指定币种(仅私聊有效)；
-			进行买币前：必须先给机器人转账(不可发红包)；
-			语法：买币 bch
+				[语法: 币种 bch]
+
+		买币 - 依据当前交易所的价格，购买指定币种(仅私聊有效)；进行买币前：必须先给机器人转账(不可发红包)；
+				[语法：买币 bch]
+
 		打赏 - 给某人打赏(仅群聊有效)
-			语法：打赏 1cet @某人
+				[语法：打赏 1cet @某人]
+
 		入群 - 机器人邀请进群
-			语法：进群
+				[语法：进群]
+
 		帮助 - 获取机器人的帮助信息
-			语法：帮助
+				[语法：帮助]
 				`
 	if app != nil {
 		helpMsg += app.advert
