@@ -1,7 +1,9 @@
 package app
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -9,29 +11,27 @@ import (
 
 func handler(app *RobotApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		news := new(baseNews)
-		if err := news.getNewsFromRequest(r); err != nil {
+		key, err := getKeysFromRequest(r)
+		if err != nil {
+			log.Errorf(err.Error())
 			return
 		}
-		log.Infof("typeKey : %d, sendMsgWeChatID : %s, receiveMsgWeChatID : %s, recvMsg : %s\n",
-			news.typeKey, news.sendMsgWeChatID, news.receiveMsgWeChatID, news.recvMsg)
-
-		switch news.typeKey {
+		switch key {
 		case PrivateChatType:
-			handlerPrivateChatMsg(news, app, responseWeChat)
+			handlerPrivateChatMsg(getPrivNews(r), app, responseWeChat)
 		case ReceiveTransferType:
-			handlerReceiveTransfer(news, app, responseWeChat)
+			handlerReceiveTransfer(getPrivNews(r), app, responseWeChat)
 		case GroupChatType:
-			handlerGroupChat(news, app)
+			handlerGroupChat(getGroupNews(r), app, responseWeChat)
 		case AgreeGroupInvite:
-			handlerGroupInvite(news, responseWeChat)
+			handlerGroupInvite(getPrivNews(r), responseWeChat)
 		case ReceiveAddFriendRequest:
-			handlerFriendVerify(news, responseWeChat)
+			handlerFriendVerify(getPrivNews(r), responseWeChat)
 		}
 	}
 }
 
-func handlerPrivateChatMsg(news *baseNews, app *RobotApp, fn func([]byte) error) {
+func handlerPrivateChatMsg(news *privNews, app *RobotApp, fn func([]byte) error) {
 	var resMsg []byte
 	resMsg = news.groupResMsg(PrivateChatType, getHelpMsg(app))
 	if strings.HasPrefix(news.recvMsg, BUYTOKEN) {
@@ -47,7 +47,7 @@ func handlerPrivateChatMsg(news *baseNews, app *RobotApp, fn func([]byte) error)
 	}
 }
 
-func handlerReceiveTransfer(news *baseNews, app *RobotApp, fn func([]byte) error) {
+func handlerReceiveTransfer(news *privNews, app *RobotApp, fn func([]byte) error) {
 	resMsg := news.groupResMsg(ResponseTransferType, news.recvMsg)
 	if err := Retry(3, 3, func() error {
 		return fn(resMsg)
@@ -60,11 +60,36 @@ func handlerReceiveTransfer(news *baseNews, app *RobotApp, fn func([]byte) error
 	}
 }
 
-func handlerGroupChat(news *baseNews, app *RobotApp) {
-	//var resMsg []byte
+func handlerGroupChat(news *GroupMsg, app *RobotApp, fn func([]byte) error) {
+	var resMsg []byte
+	if strings.HasPrefix(news.revMsg, HELP) {
+		// 如果at 了机器人; 进行帮助信息的回复
+		if _, ok := news.atWeChatIDS[news.robotID]; ok {
+			resMsg = news.GroupMsg(ResGroupChatType, getHelpMsg(app))
+		}
+	} else if strings.HasPrefix(news.revMsg, TIPS) {
+		resMsg = news.GroupMsg(PrivateChatType, "打赏失败")
+		// 从发送信息的人的账户， 打赏 at的所有人，一定数量的金额
+		datas := strings.Split(news.revMsg, " ")
+		amountStr := datas[1]
+		denom := datas[2]
+		amount, err := strconv.Atoi(amountStr)
+		if err == nil {
+			if txid, err := tipDenomToPeoples(app, denom, amount, news); err == nil {
+				resMsg = news.GroupMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
+			}
+		}
+	}
+
+	if err := Retry(3, 3, func() error {
+		return fn(resMsg)
+	}); err != nil {
+		log.Errorf("回复群消息失败")
+	}
+	return
 }
 
-func handlerGroupInvite(news *baseNews, fn func([]byte) error) {
+func handlerGroupInvite(news *privNews, fn func([]byte) error) {
 	resMsg := news.groupResMsg(AgreeGroupInvite, news.recvMsg)
 	if err := Retry(3, 3, func() error {
 		return fn(resMsg)
@@ -73,7 +98,7 @@ func handlerGroupInvite(news *baseNews, fn func([]byte) error) {
 	}
 }
 
-func handlerFriendVerify(news *baseNews, fn func([]byte) error) {
+func handlerFriendVerify(news *privNews, fn func([]byte) error) {
 	resMsg := news.groupResMsg(AgreeFriendVerify, news.recvMsg)
 	if err := Retry(3, 3, func() error {
 		return fn(resMsg)

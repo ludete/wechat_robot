@@ -62,7 +62,7 @@ func getHelpMsg(app *RobotApp) string {
 				[语法：买币 bch]
 
 		打赏 - 给某人打赏(仅群聊有效)
-				[语法：打赏 1cet @某人]
+				[语法：打赏 1 cet @某人 @某人]
 
 		入群 - 机器人邀请进群
 				[语法：进群]
@@ -94,7 +94,7 @@ func getOrCreateWallet(app *RobotApp, weChatID string) (string, error) {
 	return walletID, err
 }
 
-func buyTokens(app *RobotApp, news *baseNews) []byte {
+func buyTokens(app *RobotApp, news *privNews) []byte {
 	denom := getCoinDenomFromMsg(news.recvMsg)
 	if !checkBuyCoins(denom) {
 		log.Errorf("不支持购买改币种 : %s\n", news.recvMsg)
@@ -193,4 +193,115 @@ func checkBuyCoins(denom string) bool {
 		return true
 	}
 	return false
+}
+
+func getPrivNews(r *http.Request) *privNews {
+	news := new(privNews)
+	news.getNewsFromRequest(r)
+	return news
+}
+
+func getGroupNews(r *http.Request) *GroupMsg {
+	news := new(GroupMsg)
+	news.getGroupMsg(r)
+	return news
+}
+
+func getKeysFromRequest(r *http.Request) (int, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return -1, err
+	}
+	typeStr := r.PostForm.Get(TypeKey)
+	typeKey, err := strconv.Atoi(typeStr)
+	if err != nil {
+		return -1, err
+	}
+	return typeKey, nil
+}
+
+func tipDenomToPeoples(app *RobotApp, denom string, amount int, news *GroupMsg) (string, error) {
+	sendNews, err := getOrCreateWalletIDAndAddr(app, news.sendMsgWeChatID, denom)
+	if err != nil {
+		return "", err
+	}
+	sendWallet := sendNews[0]
+
+	recvAddrs := make([]string, 0, len(news.atWeChatIDS))
+	for id := range news.atWeChatIDS {
+		atWalletAndAddr, err := getOrCreateWalletIDAndAddr(app, id, denom)
+		if err != nil {
+			return "", err
+		}
+		recvAddrs = append(recvAddrs, atWalletAndAddr[1])
+	}
+
+	transfers := make([]wallets.TransferNews, len(recvAddrs))
+	for i, addr := range recvAddrs {
+		transfers[i] = wallets.TransferNews{
+			Address: addr,
+			Amount:  int64(amount),
+			Denom:   denom,
+		}
+	}
+
+	txID, err := app.wallet.SendMoney(sendWallet, transfers)
+	if err != nil {
+		return "", err
+	}
+	return txID, nil
+}
+
+func getOrCreateWalletIDAndAddr(app *RobotApp, weChatID string, denom string) ([]string, error) {
+	walletID, err := getOrCreateWalletForUser(app, weChatID)
+	if err != nil {
+		return nil, err
+	}
+	addr, err := getOrCreateDenomAddr(app, walletID, weChatID, denom)
+	if err != nil {
+		return nil, err
+	}
+	return []string{
+		walletID,
+		addr,
+	}, nil
+}
+
+func getOrCreateWalletForUser(app *RobotApp, weChatID string) (string, error) {
+	sendWalletID, err := app.db.GetUserWalletKeyID(weChatID)
+	if err != nil {
+		var walletID string
+		if err = Retry(3, 3, func() error {
+			walletID, err = app.wallet.CreateUserWallet()
+			return err
+		}); err != nil {
+			log.Errorf("create user wallet failed, err : %s", err.Error())
+			return "", err
+		}
+
+		if err := app.db.PutUserWalletKeyID(weChatID, walletID); err != nil {
+			log.Errorf("store walletID to db failed; err : %s", err.Error())
+			return "", err
+		}
+	}
+	return sendWalletID, nil
+}
+
+func getOrCreateDenomAddr(app *RobotApp, walletID, weChatID, denom string) (string, error) {
+	addr, err := app.db.GetUserDenomAddrInWallet(weChatID, walletID, denom)
+	if err != nil {
+		if err = Retry(3, 3, func() error {
+			addr, _, err = app.wallet.GetAmountOfDenoms(walletID, denom)
+			return err
+		}); err != nil {
+			log.Errorf("create %s addr failed in wallet, err : %s", denom, err.Error())
+			return "", err
+		}
+
+		if err = app.db.PutUserDenomAddrInWallet(weChatID, walletID, denom, addr); err != nil {
+			log.Errorf("store %s denom addr in db failed, err : %s", denom, err.Error())
+			return "", err
+		}
+	}
+	return addr, nil
 }

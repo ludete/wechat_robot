@@ -12,7 +12,9 @@ const (
 	AgreeFriendVerify       = 303
 
 	AgreeGroupInvite = 302
+
 	GroupChatType    = 200
+	ResGroupChatType = 102
 )
 
 const (

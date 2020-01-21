@@ -3,9 +3,6 @@ package app
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
-
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -18,47 +15,33 @@ const (
 	TypeKey         = "type"
 	SendMsgIDKey    = "from_wxid"
 	ReceiveMsgIDKey = "robot_wxid"
+	RobotIDKey      = "robot_wxid"
 
-	ResSendMsgIDKey = "robot_wxid"
 	ResReceiveIDKey = "to_wxid"
 	FriendIDKey     = "friend_wxid"
+
+	GroupMsgSendKey = "final_from_wxid"
+	GroupRoomKey    = "from_wxid"
 	AtWeChatIDKey   = "at_wxid"
 )
 
-type baseNews struct {
+type privNews struct {
 	typeKey int
 
 	// private msg
 	sendMsgWeChatID    string
 	receiveMsgWeChatID string
-
-	// group msg
-	atWeChatID string
-	groupID    string
-
-	recvMsg string
-
-	money int
+	recvMsg            string
 }
 
-func (b *baseNews) getNewsFromRequest(r *http.Request) error {
-	err := r.ParseForm()
-	if err != nil {
-		return err
-	}
-	typeStr := r.PostForm.Get(TypeKey)
-	if b.typeKey, err = strconv.Atoi(typeStr); err != nil {
-		return err
-	}
-	logrus.Info(r.PostForm)
+func (b *privNews) getNewsFromRequest(r *http.Request) {
 	b.sendMsgWeChatID = r.PostForm.Get(SendMsgIDKey)
 	b.receiveMsgWeChatID = r.PostForm.Get(ReceiveMsgIDKey)
 	b.recvMsg = r.PostForm.Get(MsgKey)
-	b.atWeChatID = r.PostForm.Get(AtWeChatIDKey)
-	return nil
+	return
 }
 
-func (b *baseNews) groupResMsg(msgType int, resMsg string) []byte {
+func (b *privNews) groupResMsg(msgType int, resMsg string) []byte {
 	data := make(map[string]interface{})
 	data[TypeKey] = msgType
 	data[MsgKey] = resMsg
@@ -76,10 +59,42 @@ func (b *baseNews) groupResMsg(msgType int, resMsg string) []byte {
 	return bz
 }
 
-type stop struct {
-	error
+type GroupMsg struct {
+	// private msg
+	groupRoomID     string
+	sendMsgWeChatID string
+	robotID         string
+	revMsg          string
+	atWeChatIDS     map[string]struct{}
 }
 
-func NoRetryError(err error) stop {
-	return stop{err}
+func (g *GroupMsg) getGroupMsg(r *http.Request) {
+	g.groupRoomID = r.PostForm.Get(GroupRoomKey)
+	g.sendMsgWeChatID = r.PostForm.Get(GroupMsgSendKey)
+	g.robotID = r.PostForm.Get(RobotIDKey)
+	g.revMsg = r.PostForm.Get(MsgKey)
+	g.getAtIDs(r)
+}
+
+func (g *GroupMsg) getAtIDs(r *http.Request) {
+	g.atWeChatIDS = nil
+}
+
+func (g *GroupMsg) GroupMsg(typeKey int, msg string) []byte {
+	data := make(map[string]interface{})
+	data[TypeKey] = typeKey
+	data[MsgKey] = msg
+	if typeKey == PrivateChatType {
+		data[ResReceiveIDKey] = g.sendMsgWeChatID
+	} else {
+		data[RobotIDKey] = g.robotID
+		data[AtWeChatIDKey] = g.sendMsgWeChatID
+		data[ResReceiveIDKey] = g.groupRoomID
+	}
+	bz, err := json.Marshal(data)
+	if err != nil {
+		return nil
+	}
+	bz = []byte(toUnicode(string(bz)))
+	return bz
 }
