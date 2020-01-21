@@ -22,8 +22,8 @@ type IfWallet struct {
 }
 
 type TransferNews struct {
-	Address string
-	Amount  int64
+	Address string `json:"address"`
+	Amount  int64  `json:"amount"`
 	Denom   string `json:"denom,omitempty"`
 }
 
@@ -60,7 +60,7 @@ func (i IfWallet) SendMoney(walletID string, news []TransferNews) (string, error
 	data["token_id_hex"] = denomID
 	data["receivers"] = news
 	bz, _ := json.Marshal(data)
-	fmt.Println("send money : ", bz)
+	fmt.Printf("send money : %s\n", bz)
 	res, err := i.sendRequest(url, bytes.NewBuffer(bz))
 	if err != nil {
 		return "", err

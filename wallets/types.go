@@ -22,13 +22,13 @@ func (r *IFResponse) GetWalletCredentialID() (string, error) {
 
 func (r *IFResponse) GetTxID() (string, error) {
 	if r.Code != 0 || r.Message != "OK" {
-		return "", fmt.Errorf("request send coin failed\n")
+		return "", fmt.Errorf("request send coin failed, code : %d, error : %s", r.Code, r.Message)
 	}
-	data, ok := r.Data.(map[string]string)
+	data, ok := r.Data.(map[string]interface{})
 	if !ok {
 		return "", fmt.Errorf("convert interface{} to map[string]string failed\n")
 	}
-	return data["txid"], nil
+	return data["txid"].(string), nil
 }
 
 func (r *IFResponse) GetBalanceAndAddr(tokenID string) (string, int) {
