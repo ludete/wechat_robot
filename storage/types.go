@@ -1,12 +1,15 @@
 package storage
 
 const (
+	WALLETID    = 'A'
+	BUYRECORD   = 'B'
+	DENOMADDR   = 'C'
+	TIPEDRECORD = 'D'
+
 	BALANCE        = 'N'
 	RECEIVERMB     = 'R'
-	BUYRECORD      = 'B'
 	WITHDRAWRECORD = 'W'
 	TIPSRECORD     = 'T'
-	TIPEDRECORD    = 'D'
 )
 
 const (

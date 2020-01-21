@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -23,14 +24,6 @@ type GoLevelDB struct {
 	batch *leveldb.Batch
 }
 
-func (g *GoLevelDB) GetUserWalletKeyID(weChatID string) string {
-	panic("implement me")
-}
-
-func (g *GoLevelDB) GetUserDeomAddr(weChatID string, denom string) (string, error) {
-	panic("implement me")
-}
-
 func NewDB(config string) DB {
 	db, err := leveldb.OpenFile(config, nil)
 	if err != nil {
@@ -40,6 +33,51 @@ func NewDB(config string) DB {
 		db:    db,
 		batch: new(leveldb.Batch),
 	}
+}
+
+func (g *GoLevelDB) GetUserWalletKeyID(weChatID string) (string, error) {
+	key := generateWalletIDKey(weChatID)
+	val, err := g.db.Get(key, nil)
+	if err != nil {
+		return "", err
+	}
+	return string(val), nil
+}
+
+func (g *GoLevelDB) PutUserWalletKeyID(weChatID string, walletID string) error {
+	key := generateWalletIDKey(weChatID)
+	return g.db.Put(key, []byte(walletID), nil)
+}
+
+func generateWalletIDKey(weChatID string) []byte {
+	buf := bytes.NewBuffer(nil)
+	buf.Write([]byte{WALLETID})
+	buf.Write([]byte(weChatID))
+	return buf.Bytes()
+}
+
+func (g *GoLevelDB) GetUserDenomAddrInWallet(weChatID, walletID, denom string) (string, error) {
+	key := generateDenomAddrKey(weChatID, walletID, denom)
+	val, err := g.db.Get(key, nil)
+	if err != nil {
+		return "", err
+	}
+	return string(val), nil
+}
+
+func (g *GoLevelDB) PutUserDenomAddrInWallet(weChatID, walletID, denom string, addr string) error {
+	key := generateDenomAddrKey(weChatID, walletID, denom)
+	return g.db.Put(key, []byte(addr), nil)
+}
+
+func generateDenomAddrKey(weChatID, walletID, denom string) []byte {
+	denom = strings.ToLower(denom)
+	buf := bytes.NewBuffer(nil)
+	buf.Write([]byte{DENOMADDR})
+	buf.Write([]byte(weChatID))
+	buf.Write([]byte(walletID))
+	buf.Write([]byte(denom))
+	return buf.Bytes()
 }
 
 func (g *GoLevelDB) getUserBalance(key []byte) (uint64, error) {
