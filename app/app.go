@@ -19,23 +19,27 @@ import (
 type RobotApp struct {
 	dbMutex sync.Mutex
 	db      storage.DB
-	server  *http.Server
 
+	server   *http.Server
 	exchange exchanges.Exchange
-
-	userID   string
-	password string
-	advert   string
 	wallet   wallets.WalletInterface
+	advert   string
 }
 
 func NewRobotApp(cfg *toml.Tree) *RobotApp {
 	dbPath := cfg.GetDefault("db", "data").(string)
 	app := &RobotApp{
-		dbMutex:  sync.Mutex{},
-		db:       storage.NewDB(dbPath),
-		userID:   cfg.Get("user-name").(string),
-		password: cfg.Get("password").(string),
+		dbMutex: sync.Mutex{},
+		db:      storage.NewDB(dbPath),
+		exchange: exchanges.NewExchanges(
+			cfg.GetDefault("coinex", "").(string),
+			cfg.GetDefault("binance", "").(string),
+		),
+		wallet: wallets.NewWallet(
+			cfg.GetDefault("wallet", "").(string),
+			cfg.GetDefault("keyid", "").(string),
+			cfg.GetDefault("secretid", "").(string),
+		),
 	}
 
 	router := registerHandler(app)
@@ -59,7 +63,7 @@ func (app *RobotApp) Start() {
 	log.Info("robot begin start")
 	go func() {
 		if err := app.server.ListenAndServe(); err != nil {
-
+			log.Errorf("listen server error : %s\n", err.Error())
 		}
 	}()
 }

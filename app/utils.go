@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ludete/wechat_robot/wallets"
+
 	"github.com/syndtr/goleveldb/leveldb"
 
 	log "github.com/sirupsen/logrus"
@@ -42,11 +44,13 @@ func responseWeChat(msg []byte) error {
 
 func queryTokenPrice(app *RobotApp, msg string) string {
 	if denom := getCoinDenomFromMsg(msg); denom != "" {
-		if price, err := app.exchange.QueryPrice(denom); err == nil {
+		price, err := app.exchange.QueryPrice(denom)
+		if err == nil {
 			return getPriceMsg(denom, price)
 		}
+		return err.Error()
 	}
-	return toUnicode("查询价格失败")
+	return "无效的币种"
 }
 
 func getHelpMsg(app *RobotApp) string {
@@ -75,21 +79,36 @@ func getHelpMsg(app *RobotApp) string {
 	return helpMsg
 }
 
-func buyTokens(app *RobotApp, news *baseNews) []byte {
-	var (
-		denom = getCoinDenomFromMsg(news.recvMsg)
-		price int
-	)
-
-	amountRMB, err := app.db.GetUserStoreRMB(news.sendMsgWeChatID)
-	if err != nil {
-		return news.groupResMsg(PrivateChatType, "未查到用户存储的资金")
+func getOrCreateWallet(app *RobotApp, weChatID string) (string, error) {
+	walletID, err := app.db.GetUserWalletKeyID(weChatID)
+	if err == nil {
+		return walletID, nil
 	}
+	if err = Retry(3, 3, func() error {
+		walletID, err = app.wallet.CreateUserWallet()
+		return err
+	}); err != nil {
+		return "", err
+	}
+	err = app.db.PutUserWalletKeyID(weChatID, walletID)
+	return walletID, err
+}
+
+func buyTokens(app *RobotApp, news *baseNews) []byte {
+	denom := getCoinDenomFromMsg(news.recvMsg)
 	if !checkBuyCoins(denom) {
 		log.Errorf("不支持购买改币种 : %s\n", news.recvMsg)
 		return news.groupResMsg(PrivateChatType, SupportTokens())
 	}
-
+	amountRMB, err := app.db.GetUserStoreRMB(news.sendMsgWeChatID)
+	if err != nil {
+		return news.groupResMsg(PrivateChatType, "未查到用户存储的资金")
+	}
+	walletID, err := getOrCreateWallet(app, news.sendMsgWeChatID)
+	if err != nil {
+		return news.groupResMsg(PrivateChatType, "购买失败")
+	}
+	var price string
 	if err := Retry(3, 2, func() error {
 		price, err = app.exchange.QueryPrice(denom)
 		return err
@@ -98,28 +117,33 @@ func buyTokens(app *RobotApp, news *baseNews) []byte {
 		return news.groupResMsg(PrivateChatType, "交易所查询币种价格失败")
 	}
 
-	tokenAmount := calRMBToTokenAmount(amountRMB, price)
-	if checkIsTooSmallToken(tokenAmount) {
-		log.Errorf("购买的币种 : %s 数量 %d 太少\n", denom, tokenAmount)
+	buyTokenAmount := calRMBToTokenAmount(amountRMB, price)
+	if checkIsTooSmallToken(buyTokenAmount) {
+		log.Errorf("购买的币种 : %s 数量 %d 太少\n", denom, buyTokenAmount)
 		return news.groupResMsg(PrivateChatType, "购买的数量太少")
 	}
 
-	walletID := app.db.GetUserWalletKeyID(news.receiveMsgWeChatID)
 	toAddr, err := app.db.GetUserDeomAddr(news.sendMsgWeChatID, denom)
 	if err == leveldb.ErrNotFound {
-		err = app.wallet.SendMoney(walletID, toAddr, denom, tokenAmount)
+		_, err = app.wallet.SendMoney(walletID, []wallets.TransferNews{
+			{
+				Address: toAddr,
+				Denom:   denom,
+				Amount:  float64(buyTokenAmount),
+			},
+		})
 	}
 
 	if err := Retry(3, 3, func() error {
-		return app.wallet.SendMoney(news.receiveMsgWeChatID, news.sendMsgWeChatID, denom, tokenAmount)
+		//return app.wallet.SendMoney(news.receiveMsgWeChatID, news.sendMsgWeChatID, denom, buyTokenAmount)
 	}); err != nil {
 		log.Errorf("send %s token from %s to %s amount %d failed in wallet\n",
-			denom, news.receiveMsgWeChatID, news.sendMsgWeChatID, tokenAmount)
+			denom, news.receiveMsgWeChatID, news.sendMsgWeChatID, buyTokenAmount)
 		return news.groupResMsg(PrivateChatType, "购买失败")
 	}
 	app.db.ClearUserStoreRMB(news.sendMsgWeChatID)
-	app.db.BuyTokenRecord(news.sendMsgWeChatID, denom, tokenAmount)
-	return news.groupResMsg(PrivateChatType, fmt.Sprintf("购买%s成功，数量%d\n", denom, tokenAmount))
+	app.db.BuyTokenRecord(news.sendMsgWeChatID, denom, buyTokenAmount)
+	return news.groupResMsg(PrivateChatType, fmt.Sprintf("购买%s成功，数量%d\n", denom, buyTokenAmount))
 }
 
 func SupportTokens() string {
@@ -134,8 +158,8 @@ func getCoinDenomFromMsg(msg string) string {
 	return ""
 }
 
-func calRMBToTokenAmount(rmb int, price int) int {
-	return rmb / price
+func calRMBToTokenAmount(rmb int, price string) int {
+	return rmb / 1
 }
 
 func checkIsTooSmallToken(tokenAmount int) bool {
@@ -145,8 +169,8 @@ func checkIsTooSmallToken(tokenAmount int) bool {
 	return false
 }
 
-func getPriceMsg(denom string, price int) string {
-	return toUnicode(denom + " 价格：" + strconv.Itoa(price))
+func getPriceMsg(denom string, price string) string {
+	return denom + " 价格：" + price
 }
 
 func toUnicode(str string) string {

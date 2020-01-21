@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -48,6 +50,7 @@ func (b *baseNews) getNewsFromRequest(r *http.Request) error {
 	if b.typeKey, err = strconv.Atoi(typeStr); err != nil {
 		return err
 	}
+	logrus.Info(r.PostForm)
 	b.sendMsgWeChatID = r.PostForm.Get(SendMsgIDKey)
 	b.receiveMsgWeChatID = r.PostForm.Get(ReceiveMsgIDKey)
 	b.recvMsg = r.PostForm.Get(MsgKey)
