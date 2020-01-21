@@ -123,19 +123,20 @@ func buyTokens(app *RobotApp, news *baseNews) []byte {
 		return news.groupResMsg(PrivateChatType, "购买的数量太少")
 	}
 
-	toAddr, err := app.db.GetUserDeomAddr(news.sendMsgWeChatID, denom)
+	toAddr, err := app.db.GetUserDenomAddrInWallet(news.sendMsgWeChatID, "", denom)
 	if err == leveldb.ErrNotFound {
 		_, err = app.wallet.SendMoney(walletID, []wallets.TransferNews{
 			{
 				Address: toAddr,
 				Denom:   denom,
-				Amount:  float64(buyTokenAmount),
+				Amount:  int64(buyTokenAmount),
 			},
 		})
 	}
 
 	if err := Retry(3, 3, func() error {
 		//return app.wallet.SendMoney(news.receiveMsgWeChatID, news.sendMsgWeChatID, denom, buyTokenAmount)
+		return nil
 	}); err != nil {
 		log.Errorf("send %s token from %s to %s amount %d failed in wallet\n",
 			denom, news.receiveMsgWeChatID, news.sendMsgWeChatID, buyTokenAmount)
