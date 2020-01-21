@@ -1,8 +1,7 @@
 package wallets
 
 type WalletInterface interface {
-	SendMoney(from, to string, denom string, amount int) error
-	GetAmountOfDenom(addr string, denom string) int
-	GetAllAmounts(addr string) map[string]int
-	CreateUserDenomAddr() string
+	SendMoney(walletID string, news []TransferNews) (string, error)
+	GetAmountOfDenoms(credentialID string, denom string) (string, int, error)
+	CreateUserWallet() (string, error)
 }

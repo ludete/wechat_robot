@@ -2,24 +2,25 @@ package wallets
 
 import "fmt"
 
-type Response struct {
+type IFResponse struct {
 	Code    int
 	Data    interface{}
 	Message string
 }
 
-func (r *Response) GetWalletCredentialID() (string, error) {
+func (r *IFResponse) GetWalletCredentialID() (string, error) {
 	if r.Code != 0 || r.Message != "OK" {
-		return "", fmt.Errorf("request create wallet failed\n")
+		fmt.Printf("%s\n", r.Message)
+		return "", fmt.Errorf("code : %d, message : %s\n", r.Code, r.Message)
 	}
-	data, ok := r.Data.(map[string]string)
+	data, ok := r.Data.(map[string]interface{})
 	if !ok {
 		return "", fmt.Errorf("convert interface{} to map[string]string failed\n")
 	}
-	return data["credential_id"], nil
+	return data["credential_id"].(string), nil
 }
 
-func (r *Response) GetTxID() (string, error) {
+func (r *IFResponse) GetTxID() (string, error) {
 	if r.Code != 0 || r.Message != "OK" {
 		return "", fmt.Errorf("request send coin failed\n")
 	}
@@ -30,7 +31,7 @@ func (r *Response) GetTxID() (string, error) {
 	return data["txid"], nil
 }
 
-func (r *Response) GetBalanceAndAddr(tokenID string) (string, int) {
+func (r *IFResponse) GetBalanceAndAddr(tokenID string) (string, int) {
 	if r.Code != 0 || r.Message != "OK" {
 		return "", -1
 	}
@@ -39,20 +40,22 @@ func (r *Response) GetBalanceAndAddr(tokenID string) (string, int) {
 		return "", -1
 	}
 	addr := data["slp_address"].(string)
-	balances, ok := data["tokens"].([]Balance)
+	balances, ok := data["tokens"].([]interface{})
 	if !ok {
 		return "", -1
 	}
+
 	for _, v := range balances {
-		if v.TokenID == tokenID {
-			return addr, v.TokenBalance
+		balance := v.(map[string]interface{})
+		if balance["tokenId"].(string) == tokenID {
+			return addr, int(balance["token_balance"].(float64))
 		}
 	}
 	return "", -1
 }
 
 type Balance struct {
-	SatoshiBalance int    `json:"satoshis_balance"`
-	TokenID        string `json:"tokenId"`
-	TokenBalance   int    `json:"token_balance"`
+	SatoshiBalance float64 `json:"satoshis_balance"`
+	TokenID        string  `json:"tokenId"`
+	TokenBalance   float64 `json:"token_balance"`
 }
