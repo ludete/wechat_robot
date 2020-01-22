@@ -13,7 +13,7 @@ type CoinexExchange struct {
 }
 
 func (c CoinexExchange) QueryPrice(market string) (string, error) {
-	symbol := strings.ToLower(market + "usdt")
+	symbol := strings.ToLower(strings.Trim(market, "=") + "usdt")
 	if market == SPICE {
 		symbol = strings.ToLower(market + "cet")
 	}

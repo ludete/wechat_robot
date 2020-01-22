@@ -51,7 +51,6 @@ func Retry(num int, sleep int, fn func() error) error {
 }
 
 func responseWeChat(url string, msg []byte) error {
-	//	res, err := http.PostForm("http://192.168.1.2:8073/send", *values)
 	res, err := http.Post(url, "application/json; Charset=UTF-8", bytes.NewBuffer(msg))
 	if err != nil {
 		log.Error("send post request failed ...")

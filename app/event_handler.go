@@ -20,22 +20,24 @@ func handler(app *RobotApp) http.HandlerFunc {
 			log.Errorf(err.Error())
 			return
 		}
+		//w.Write([]byte("hello world"))
+		//return
 		switch key {
 		case PrivateChatType:
-			handlerPrivateChatMsg(getPrivNews(r), app, responseWeChat)
+			handlerPrivateChatMsg(w, getPrivNews(r), app, responseWeChat)
 		case ReceiveTransferType:
-			handlerReceiveTransfer(getPrivNews(r), app, responseWeChat)
+			handlerReceiveTransfer(w, getPrivNews(r), app, responseWeChat)
 		case GroupChatType:
-			handlerGroupChat(getGroupNews(r), app, responseWeChat)
+			handlerGroupChat(w, getGroupNews(r), app, responseWeChat)
 		case AgreeGroupInvite:
-			handlerGroupInvite(getPrivNews(r), app, responseWeChat)
+			handlerGroupInvite(w, getPrivNews(r), app, responseWeChat)
 		case ReceiveAddFriendRequest:
-			handlerFriendVerify(getPrivNews(r), app, responseWeChat)
+			handlerFriendVerify(w, getPrivNews(r), app, responseWeChat)
 		}
 	}
 }
 
-func handlerPrivateChatMsg(news *privNews, app *RobotApp, fn ResponseFunc) {
+func handlerPrivateChatMsg(w http.ResponseWriter, news *privNews, app *RobotApp, fn ResponseFunc) {
 	var resMsg []byte
 	if strings.HasPrefix(news.recvMsg, BUYTOKEN) {
 		resMsg = buyTokens(app, news)
@@ -47,17 +49,19 @@ func handlerPrivateChatMsg(news *privNews, app *RobotApp, fn ResponseFunc) {
 		}
 	}
 	if err := Retry(3, 3, func() error {
-		return fn(app.resURL, resMsg)
+		_, errT := w.Write(resMsg)
+		return errT
 	}); err != nil {
 		log.Errorf("response private msg failed : %s\n", err.Error())
 		return
 	}
 }
 
-func handlerReceiveTransfer(news *privNews, app *RobotApp, fn ResponseFunc) {
+func handlerReceiveTransfer(w http.ResponseWriter, news *privNews, app *RobotApp, fn ResponseFunc) {
 	resMsg := news.groupResMsg(ResponseTransferType, news.recvMsg)
 	if err := Retry(3, 3, func() error {
-		return fn(app.resURL, resMsg)
+		_, err := w.Write(resMsg)
+		return err
 	}); err != nil {
 		log.Errorf("response receive transfer failed : %s\n", err.Error())
 		return
@@ -69,7 +73,7 @@ func handlerReceiveTransfer(news *privNews, app *RobotApp, fn ResponseFunc) {
 
 // 1. 帮助
 // 2. 打赏
-func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
+func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 	var resMsg []byte
 	if strings.HasPrefix(news.revMsg, HELP) {
 		// 如果at 了机器人; 进行帮助信息的回复
@@ -98,7 +102,8 @@ func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 	if len(resMsg) != 0 {
 		log.Info("response wechat msg : ", string(resMsg))
 		if err := Retry(3, 3, func() error {
-			return fn(app.resURL, resMsg)
+			_, err := w.Write(resMsg)
+			return err
 		}); err != nil {
 			log.Errorf("回复群消息失败")
 		}
@@ -106,19 +111,21 @@ func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 	return
 }
 
-func handlerGroupInvite(news *privNews, app *RobotApp, fn ResponseFunc) {
+func handlerGroupInvite(w http.ResponseWriter, news *privNews, app *RobotApp, fn ResponseFunc) {
 	resMsg := news.groupResMsg(AgreeGroupInvite, news.recvMsg)
 	if err := Retry(3, 3, func() error {
-		return fn(app.resURL, resMsg)
+		_, err := w.Write(resMsg)
+		return err
 	}); err != nil {
 		log.Errorf("response group invite failed : %s\n", err.Error())
 	}
 }
 
-func handlerFriendVerify(news *privNews, app *RobotApp, fn ResponseFunc) {
+func handlerFriendVerify(w http.ResponseWriter, news *privNews, app *RobotApp, fn ResponseFunc) {
 	resMsg := news.groupResMsg(AgreeFriendVerify, news.recvMsg)
 	if err := Retry(3, 3, func() error {
-		return fn(app.resURL, resMsg)
+		_, err := w.Write(resMsg)
+		return err
 	}); err != nil {
 		log.Errorf("response friend verify failed : %s\n", err.Error())
 	}

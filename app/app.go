@@ -73,7 +73,7 @@ func (app *RobotApp) readCoinSymbols(cfg *toml.Tree) error {
 	}
 	coins := strings.Split(string(bz), "\n")
 	for _, c := range coins {
-		app.coins[strings.ToLower(c)] = struct{}{}
+		app.coins["="+strings.ToLower(c)] = struct{}{}
 	}
 	return nil
 }
