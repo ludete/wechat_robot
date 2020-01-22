@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ludete/wechat_robot/exchanges"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -77,14 +79,15 @@ func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 	} else if strings.HasPrefix(news.revMsg, TIPS) {
 		resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
 		// 从发送信息的人的账户， 打赏 at的所有人，一定数量的金额
-		datas := strings.Split(news.revMsg, " ")
-		amountStr := datas[1]
-		denom := datas[2]
-		amount, err := strconv.Atoi(amountStr)
-		if err == nil {
-			if txid, err := tipDenomToPeoples(app, denom, amount, news); err == nil {
-				resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
+		datas := strings.Split(news.revMsg, TIPS)
+		if len(datas) == 2 {
+			if amount, err := strconv.Atoi(strings.TrimSpace(datas[1])); err == nil {
+				if txid, err := tipDenomToPeoples(app, exchanges.SPICE, amount, news); err == nil {
+					resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
+				}
 			}
+		} else {
+			resMsg = news.groupResMsg(ResGroupChatType, "格式错误")
 		}
 	} else if _, ok := app.coins[strings.ToLower(news.revMsg)]; ok {
 		price, err := app.exchange.QueryPrice(news.revMsg)
@@ -92,7 +95,6 @@ func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 			resMsg = news.groupResMsg(ResGroupChatType, price)
 		}
 	}
-
 	if len(resMsg) != 0 {
 		log.Info("response wechat msg : ", string(resMsg))
 		if err := Retry(3, 3, func() error {

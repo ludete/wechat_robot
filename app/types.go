@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -78,6 +80,7 @@ func (g *GroupMsg) getGroupMsg(r *http.Request) {
 	g.sendMsgNickName = r.PostForm.Get(GroupFromName)
 	g.robotID = r.PostForm.Get(RobotIDKey)
 	g.revMsg = getRealMsg(r.PostForm.Get(MsgKey))
+	logrus.Infof("%s\n", r.PostForm.Get(MsgKey))
 	g.atWeChatIDS = getAtWeChatMsgs(r.PostForm.Get(MsgKey))
 }
 

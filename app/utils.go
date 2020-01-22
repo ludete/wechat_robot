@@ -16,6 +16,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func getHelpMsg(app *RobotApp) string {
+	helpMsg := `
+		--机器人沟通指南--
+
+		打赏 - 给某人打赏(仅群聊有效)
+				[语法：=打赏 @某人 666]
+
+		查询 - 获取币种信息； 
+				[语法: =spice]
+
+		帮助 - 获取机器人的帮助信息
+				[语法：=帮助]
+
+		广告 - [语法：=广告]
+				`
+	if app != nil {
+		helpMsg += app.advert
+	}
+
+	//return url.QueryEscape(helpMsg)
+	//return toUnicode(helpMsg)
+	return helpMsg
+}
+
 func Retry(num int, sleep int, fn func() error) error {
 	if err := fn(); err != nil {
 		if num--; num > 0 {
@@ -58,27 +82,6 @@ func responseWeChat(url string, msg []byte) error {
 
 //买币 - 依据当前交易所的价格，购买指定币种(仅私聊有效)；进行买币前：必须先给机器人转账(不可发红包)；
 //[语法：买币 bch]
-
-func getHelpMsg(app *RobotApp) string {
-	helpMsg := `
-		--机器人沟通指南--
-		查询 - 获取币种信息； 
-				[语法: bch]
-
-		打赏 - 给某人打赏(仅群聊有效)
-				[语法：T 1 cet @某人 @某人]
-
-		帮助 - 获取机器人的帮助信息
-				[语法：帮助]
-				`
-	if app != nil {
-		helpMsg += app.advert
-	}
-
-	//return url.QueryEscape(helpMsg)
-	//return toUnicode(helpMsg)
-	return helpMsg
-}
 
 func getOrCreateWallet(app *RobotApp, weChatID string) (string, error) {
 	walletID, err := app.db.GetUserWalletKeyID(weChatID)

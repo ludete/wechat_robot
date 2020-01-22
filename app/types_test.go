@@ -26,6 +26,8 @@ func TestGetRealMsg(t *testing.T) {
 	msg = "[@at,nickname=数字货币机器人,wxid=wxid_xno0ahdy95zg12] 帮助 [@at,nickname=数字货币机器人,wxid=wxid_xno0ahdy95zg12] [@at,nickname=数字货币机器人,wxid=wxid_xno0ahdy95zg12] 帮助 haha"
 	msg = getRealMsg(msg)
 	require.EqualValues(t, "帮助   帮助 haha", msg)
+
+	msg = "=打赏 @[@emoji=\u7E24][@emoji=\u3006]、[@emoji=\u7444]   66"
 }
 
 func TestGetAtMsg(t *testing.T) {
