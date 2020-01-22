@@ -72,10 +72,10 @@ func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 	if strings.HasPrefix(news.revMsg, HELP) {
 		// 如果at 了机器人; 进行帮助信息的回复
 		if _, ok := news.atWeChatIDS[news.robotID]; ok {
-			resMsg = news.GroupMsg(ResGroupChatType, getHelpMsg(app))
+			resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
 		}
 	} else if strings.HasPrefix(news.revMsg, TIPS) {
-		resMsg = news.GroupMsg(ResGroupChatType, getHelpMsg(app))
+		resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
 		// 从发送信息的人的账户， 打赏 at的所有人，一定数量的金额
 		datas := strings.Split(news.revMsg, " ")
 		amountStr := datas[1]
@@ -83,13 +83,13 @@ func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 		amount, err := strconv.Atoi(amountStr)
 		if err == nil {
 			if txid, err := tipDenomToPeoples(app, denom, amount, news); err == nil {
-				resMsg = news.GroupMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
+				resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
 			}
 		}
 	} else {
 		price, err := app.exchange.QueryPrice(news.revMsg)
 		if err == nil {
-			resMsg = news.GroupMsg(ResGroupChatType, price)
+			resMsg = news.groupResMsg(ResGroupChatType, price)
 		}
 	}
 

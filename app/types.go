@@ -2,11 +2,8 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -84,24 +81,24 @@ func (g *GroupMsg) getGroupMsg(r *http.Request) {
 	g.atWeChatIDS = getAtWeChatMsgs(r.PostForm.Get(MsgKey))
 }
 
-func (g *GroupMsg) getAtIDs(r *http.Request) {
-	var data []interface{}
-	err := json.Unmarshal([]byte(g.revMsg), &data)
-	fmt.Println(g.revMsg)
+func (g *GroupMsg) groupResMsg(typeKey int, msg string) []byte {
+	data := make(map[string]interface{})
+	data[TypeKey] = typeKey
+	data[MsgKey] = msg
+	data[RobotIDKey] = g.robotID
+	if typeKey == PrivateChatType {
+		data[ResReceiveIDKey] = g.sendMsgWeChatID
+	} else {
+		data[AtWeChatIDKey] = g.sendMsgWeChatID
+		data[ResReceiveIDKey] = g.groupRoomID
+		data[AtWeChatNickName] = g.sendMsgNickName
+	}
+	bz, err := json.Marshal(data)
 	if err != nil {
-		logrus.Error(err.Error())
-		return
+		return nil
 	}
-	strings.Index(g.revMsg, "nickname")
-	for _, v := range data {
-		switch val := v.(type) {
-		case string:
-			g.revMsg = val
-		case []interface{}:
-			g.atWeChatIDS[getAtID(val[2].(string))] = getNickName(val[1].(string))
-		}
-	}
-	g.atWeChatIDS = nil
+	bz = []byte(toUnicode(string(bz)))
+	return bz
 }
 
 func getRealMsg(msg string) string {
@@ -145,7 +142,6 @@ func getAtWeChatMsg(msg string) string {
 }
 
 func getNickName(msg string) string {
-	//[@at,nickname=数字货币机器人,wxid=wxid_xno0ahdy95zg12]
 	begin := strings.Index(msg, "nickname") + 9
 	end := strings.Index(msg, ",wxid")
 	return msg[begin:end]
@@ -155,24 +151,4 @@ func getAtID(msg string) string {
 	begin := strings.Index(msg, "wxid") + 5
 	end := strings.Index(msg, "]")
 	return msg[begin:end]
-}
-
-func (g *GroupMsg) GroupMsg(typeKey int, msg string) []byte {
-	data := make(map[string]interface{})
-	data[TypeKey] = typeKey
-	data[MsgKey] = msg
-	data[RobotIDKey] = g.robotID
-	if typeKey == PrivateChatType {
-		data[ResReceiveIDKey] = g.sendMsgWeChatID
-	} else {
-		data[AtWeChatIDKey] = g.sendMsgWeChatID
-		data[ResReceiveIDKey] = g.groupRoomID
-		data[AtWeChatNickName] = g.sendMsgNickName
-	}
-	bz, err := json.Marshal(data)
-	if err != nil {
-		return nil
-	}
-	bz = []byte(toUnicode(string(bz)))
-	return bz
 }
