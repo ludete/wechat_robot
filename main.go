@@ -31,7 +31,11 @@ func main() {
 		return
 	}
 
-	app := app.NewRobotApp(cfg)
+	app, err := app.NewRobotApp(cfg)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	app.Start()
 	util.WaitForSignal()
 	log.Info("robot begin stop")

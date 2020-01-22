@@ -2,7 +2,10 @@ package app
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,9 +28,10 @@ type RobotApp struct {
 	wallet   wallets.WalletInterface
 	advert   string
 	resURL   string
+	coins    map[string]struct{}
 }
 
-func NewRobotApp(cfg *toml.Tree) *RobotApp {
+func NewRobotApp(cfg *toml.Tree) (*RobotApp, error) {
 	dbPath := cfg.GetDefault("db", "data").(string)
 	app := &RobotApp{
 		dbMutex: sync.Mutex{},
@@ -42,6 +46,7 @@ func NewRobotApp(cfg *toml.Tree) *RobotApp {
 			cfg.GetDefault("secretkey", "").(string),
 		),
 		resURL: cfg.GetDefault("proxy", "").(string),
+		coins:  make(map[string]struct{}, 300),
 	}
 
 	router := registerHandler(app)
@@ -52,7 +57,25 @@ func NewRobotApp(cfg *toml.Tree) *RobotApp {
 		WriteTimeout: WRITETIMEOUT * time.Second,
 	}
 	app.server = httpSvr
-	return app
+	err := app.readCoinSymbols(cfg)
+	return app, err
+}
+
+func (app *RobotApp) readCoinSymbols(cfg *toml.Tree) error {
+	filePath := cfg.GetDefault("symbols", "").(string)
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	bz, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+	coins := strings.Split(string(bz), "\n")
+	for _, c := range coins {
+		app.coins[strings.ToLower(c)] = struct{}{}
+	}
+	return nil
 }
 
 func registerHandler(app *RobotApp) *mux.Router {

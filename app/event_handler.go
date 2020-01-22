@@ -86,7 +86,7 @@ func handlerGroupChat(news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 				resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
 			}
 		}
-	} else {
+	} else if _, ok := app.coins[strings.ToLower(news.revMsg)]; ok {
 		price, err := app.exchange.QueryPrice(news.revMsg)
 		if err == nil {
 			resMsg = news.groupResMsg(ResGroupChatType, price)

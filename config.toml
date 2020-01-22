@@ -24,3 +24,6 @@ secretkey = "6nU95IhOWpbymIWvVibiNyfTEblfqkDD0TbXIVEfD30="
 # exchange info
 binance = "https://api.binance.com"
 coinex = "https://api.coinex.com"
+
+# coins
+symbols = "symbol.txt"
