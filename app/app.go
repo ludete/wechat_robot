@@ -87,8 +87,9 @@ func registerHandler(app *RobotApp) *mux.Router {
 func (app *RobotApp) Start() {
 	log.Info("robot begin start")
 	go func() {
-		if err := app.server.ListenAndServe(); err != nil {
+		if err := app.server.ListenAndServeTLS("server.crt", "server.key"); err != nil {
 			log.Errorf("listen server error : %s\n", err.Error())
+			os.Exit(1)
 		}
 	}()
 }
