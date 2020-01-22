@@ -24,6 +24,7 @@ type RobotApp struct {
 	exchange exchanges.Exchange
 	wallet   wallets.WalletInterface
 	advert   string
+	resURL   string
 }
 
 func NewRobotApp(cfg *toml.Tree) *RobotApp {
@@ -37,9 +38,10 @@ func NewRobotApp(cfg *toml.Tree) *RobotApp {
 		),
 		wallet: wallets.NewWallet(
 			cfg.GetDefault("wallet", "").(string),
-			cfg.GetDefault("keyid", "").(string),
-			cfg.GetDefault("secretid", "").(string),
+			cfg.GetDefault("apikey", "").(string),
+			cfg.GetDefault("secretkey", "").(string),
 		),
+		resURL: cfg.GetDefault("proxy", "").(string),
 	}
 
 	router := registerHandler(app)

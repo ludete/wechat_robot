@@ -32,7 +32,7 @@ func TestIfWallet_GetAmountOfDenoms(t *testing.T) {
 		"bc9f49dde58089808ec2837c2efe7310",
 		"6nU95IhOWpbymIWvVibiNyfTEblfqkDD0TbXIVEfD30=")
 	addr, balance, err := ifwallet.GetAmountOfDenoms(
-		"ad51d596fb56ca992624e182922c627b168974ca578a53adb32a2a6adde1e04d", "spice")
+		"10507cfa86dc0bfdf9e73b727630f86c5fa21f565f18c560dbdfa458e14b4a1a", "spice")
 	require.Nil(t, err)
 	fmt.Printf("addr : %s, balance : %d \n", addr, balance)
 

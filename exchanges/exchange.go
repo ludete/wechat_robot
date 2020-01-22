@@ -1,7 +1,5 @@
 package exchanges
 
-import "strings"
-
 type Exchanges struct {
 	coinex  *CoinexExchange
 	binance *BinanceExchange
@@ -15,9 +13,10 @@ func NewExchanges(coinexURL, binaceURL string) *Exchanges {
 }
 
 func (e *Exchanges) QueryPrice(market string) (string, error) {
-	switch strings.ToLower(market) {
-	case SPICE:
-		return e.coinex.QueryPrice(market)
-	}
-	return e.binance.QueryPrice(market)
+	//switch strings.ToLower(market) {
+	//case SPICE:
+	//	return e.coinex.QueryPrice(market)
+	//}
+	//return e.binance.QueryPrice(market)
+	return e.coinex.QueryPrice(market)
 }

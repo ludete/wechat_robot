@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ludete/wechat_robot/wallets"
 
@@ -25,10 +26,9 @@ func Retry(num int, sleep int, fn func() error) error {
 	return nil
 }
 
-func responseWeChat(msg []byte) error {
+func responseWeChat(url string, msg []byte) error {
 	//	res, err := http.PostForm("http://192.168.1.2:8073/send", *values)
-	res, err := http.Post("http://192.168.1.2:8073/send",
-		"application/json; Charset=UTF-8", bytes.NewBuffer(msg))
+	res, err := http.Post(url, "application/json; Charset=UTF-8", bytes.NewBuffer(msg))
 	if err != nil {
 		log.Error("send post request failed ...")
 		return err
@@ -42,30 +42,31 @@ func responseWeChat(msg []byte) error {
 	return nil
 }
 
-func queryTokenPrice(app *RobotApp, msg string) string {
-	if denom := getCoinDenomFromMsg(msg); denom != "" {
-		price, err := app.exchange.QueryPrice(denom)
-		if err == nil {
-			return getPriceMsg(denom, price)
-		}
-		return err.Error()
-	}
-	return "无效的币种"
-}
+//func queryTokenPrice(app *RobotApp, msg string) string {
+//	if denom := getCoinDenomFromMsg(msg); denom != "" {
+//		price, err := app.exchange.QueryPrice(denom)
+//		if err == nil {
+//			return getPriceMsg(denom, price)
+//		}
+//		return err.Error()
+//	}
+//	return "无效的币种"
+//}
+
+//入群 - 机器人邀请进群
+//[语法：进群]
+
+//买币 - 依据当前交易所的价格，购买指定币种(仅私聊有效)；进行买币前：必须先给机器人转账(不可发红包)；
+//[语法：买币 bch]
 
 func getHelpMsg(app *RobotApp) string {
-	helpMsg := `		--机器人沟通指南--
+	helpMsg := `
+		--机器人沟通指南--
 		查询 - 获取币种信息； 
-				[语法: 币种 bch]
-
-		买币 - 依据当前交易所的价格，购买指定币种(仅私聊有效)；进行买币前：必须先给机器人转账(不可发红包)；
-				[语法：买币 bch]
+				[语法: bch]
 
 		打赏 - 给某人打赏(仅群聊有效)
-				[语法：打赏 1 cet @某人 @某人]
-
-		入群 - 机器人邀请进群
-				[语法：进群]
+				[语法：T 1 cet @某人 @某人]
 
 		帮助 - 获取机器人的帮助信息
 				[语法：帮助]
@@ -196,18 +197,22 @@ func checkBuyCoins(denom string) bool {
 }
 
 func getPrivNews(r *http.Request) *privNews {
+	log.Info(r.PostForm)
 	news := new(privNews)
 	news.getNewsFromRequest(r)
 	return news
 }
 
 func getGroupNews(r *http.Request) *GroupMsg {
+	log.Info(r.PostForm)
 	news := new(GroupMsg)
 	news.getGroupMsg(r)
 	return news
 }
 
 func getKeysFromRequest(r *http.Request) (int, error) {
+	//bz, _ := ioutil.ReadAll(r.Body)
+	//log.Info(string(bz))
 	err := r.ParseForm()
 	if err != nil {
 		return -1, err
@@ -234,6 +239,9 @@ func tipDenomToPeoples(app *RobotApp, denom string, amount int, news *GroupMsg) 
 			return "", err
 		}
 		recvAddrs = append(recvAddrs, atWalletAndAddr[1])
+		if len(recvAddrs) == len(news.atWeChatIDS) {
+			time.Sleep(3 * time.Millisecond)
+		}
 	}
 
 	transfers := make([]wallets.TransferNews, len(recvAddrs))
@@ -270,16 +278,15 @@ func getOrCreateWalletIDAndAddr(app *RobotApp, weChatID string, denom string) ([
 func getOrCreateWalletForUser(app *RobotApp, weChatID string) (string, error) {
 	sendWalletID, err := app.db.GetUserWalletKeyID(weChatID)
 	if err != nil {
-		var walletID string
 		if err = Retry(3, 3, func() error {
-			walletID, err = app.wallet.CreateUserWallet()
+			sendWalletID, err = app.wallet.CreateUserWallet()
 			return err
 		}); err != nil {
 			log.Errorf("create user wallet failed, err : %s", err.Error())
 			return "", err
 		}
 
-		if err := app.db.PutUserWalletKeyID(weChatID, walletID); err != nil {
+		if err := app.db.PutUserWalletKeyID(weChatID, sendWalletID); err != nil {
 			log.Errorf("store walletID to db failed; err : %s", err.Error())
 			return "", err
 		}
@@ -288,9 +295,11 @@ func getOrCreateWalletForUser(app *RobotApp, weChatID string) (string, error) {
 }
 
 func getOrCreateDenomAddr(app *RobotApp, walletID, weChatID, denom string) (string, error) {
+	fmt.Printf("begin  walletID : %s\n", walletID)
 	addr, err := app.db.GetUserDenomAddrInWallet(weChatID, walletID, denom)
 	if err != nil {
 		if err = Retry(3, 3, func() error {
+			fmt.Printf("middle walletID : %s\n", walletID)
 			addr, _, err = app.wallet.GetAmountOfDenoms(walletID, denom)
 			return err
 		}); err != nil {

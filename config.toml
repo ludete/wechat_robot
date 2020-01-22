@@ -1,5 +1,6 @@
 #listen port
 port = 5000
+proxy = "http://192.168.124.7:8073/send"
 
 # leveldb path
 db = "data"
@@ -16,5 +17,10 @@ user-name = "ludete"
 password = "12345678"
 
 # wallet info
+wallet = "http://47.52.172.230:8082"
 apikey = "bc9f49dde58089808ec2837c2efe7310"
-secretkey = "6nU95IhOWpbymIWvVibiNyfTEblfqkDD0TbXIVEfD30"
+secretkey = "6nU95IhOWpbymIWvVibiNyfTEblfqkDD0TbXIVEfD30="
+
+# exchange info
+binance = "https://api.binance.com"
+coinex = "https://api.coinex.com"

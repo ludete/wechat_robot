@@ -2,7 +2,11 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -20,9 +24,11 @@ const (
 	ResReceiveIDKey = "to_wxid"
 	FriendIDKey     = "friend_wxid"
 
-	GroupMsgSendKey = "final_from_wxid"
-	GroupRoomKey    = "from_wxid"
-	AtWeChatIDKey   = "at_wxid"
+	GroupMsgSendKey  = "final_from_wxid"
+	GroupFromName    = "from_name"
+	GroupRoomKey     = "from_wxid"
+	AtWeChatIDKey    = "at_wxid"
+	AtWeChatNickName = "at_name"
 )
 
 type privNews struct {
@@ -63,33 +69,105 @@ type GroupMsg struct {
 	// private msg
 	groupRoomID     string
 	sendMsgWeChatID string
+	sendMsgNickName string
 	robotID         string
 	revMsg          string
-	atWeChatIDS     map[string]struct{}
+	atWeChatIDS     map[string]string
 }
 
 func (g *GroupMsg) getGroupMsg(r *http.Request) {
 	g.groupRoomID = r.PostForm.Get(GroupRoomKey)
 	g.sendMsgWeChatID = r.PostForm.Get(GroupMsgSendKey)
+	g.sendMsgNickName = r.PostForm.Get(GroupFromName)
 	g.robotID = r.PostForm.Get(RobotIDKey)
-	g.revMsg = r.PostForm.Get(MsgKey)
-	g.getAtIDs(r)
+	g.revMsg = getRealMsg(r.PostForm.Get(MsgKey))
+	g.atWeChatIDS = getAtWeChatMsgs(r.PostForm.Get(MsgKey))
 }
 
 func (g *GroupMsg) getAtIDs(r *http.Request) {
+	var data []interface{}
+	err := json.Unmarshal([]byte(g.revMsg), &data)
+	fmt.Println(g.revMsg)
+	if err != nil {
+		logrus.Error(err.Error())
+		return
+	}
+	strings.Index(g.revMsg, "nickname")
+	for _, v := range data {
+		switch val := v.(type) {
+		case string:
+			g.revMsg = val
+		case []interface{}:
+			g.atWeChatIDS[getAtID(val[2].(string))] = getNickName(val[1].(string))
+		}
+	}
 	g.atWeChatIDS = nil
+}
+
+func getRealMsg(msg string) string {
+	if !strings.Contains(msg, "[@at,") {
+		index := strings.Index(msg, "[@at,")
+		if index < 0 {
+			return strings.TrimSpace(msg)
+		}
+		return strings.TrimSpace(msg[:index])
+	}
+	msg = trimAtWeChatMsg(strings.TrimSpace(msg))
+	return getRealMsg(msg)
+}
+
+func trimAtWeChatMsg(msg string) string {
+	begin := strings.Index(msg, "[@at,")
+	end := strings.Index(msg, "]")
+	return strings.TrimSpace(msg[:begin] + msg[end+1:])
+}
+
+func getAtWeChatMsgs(msg string) map[string]string {
+	data := make(map[string]string)
+	for {
+		atMsg := getAtWeChatMsg(msg)
+		if len(atMsg) == 0 {
+			return data
+		}
+		data[getAtID(atMsg)] = getNickName(atMsg)
+		index := strings.Index(msg, atMsg)
+		msg = msg[index+len(atMsg):]
+	}
+}
+
+func getAtWeChatMsg(msg string) string {
+	begin := strings.Index(msg, "[@at,nickname=")
+	end := strings.Index(msg, "]")
+	if begin < 0 || end < 0 {
+		return ""
+	}
+	return msg[begin : end+1]
+}
+
+func getNickName(msg string) string {
+	//[@at,nickname=数字货币机器人,wxid=wxid_xno0ahdy95zg12]
+	begin := strings.Index(msg, "nickname") + 9
+	end := strings.Index(msg, ",wxid")
+	return msg[begin:end]
+}
+
+func getAtID(msg string) string {
+	begin := strings.Index(msg, "wxid") + 5
+	end := strings.Index(msg, "]")
+	return msg[begin:end]
 }
 
 func (g *GroupMsg) GroupMsg(typeKey int, msg string) []byte {
 	data := make(map[string]interface{})
 	data[TypeKey] = typeKey
 	data[MsgKey] = msg
+	data[RobotIDKey] = g.robotID
 	if typeKey == PrivateChatType {
 		data[ResReceiveIDKey] = g.sendMsgWeChatID
 	} else {
-		data[RobotIDKey] = g.robotID
 		data[AtWeChatIDKey] = g.sendMsgWeChatID
 		data[ResReceiveIDKey] = g.groupRoomID
+		data[AtWeChatNickName] = g.sendMsgNickName
 	}
 	bz, err := json.Marshal(data)
 	if err != nil {

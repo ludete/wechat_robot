@@ -13,7 +13,10 @@ type CoinexExchange struct {
 }
 
 func (c CoinexExchange) QueryPrice(market string) (string, error) {
-	symbol := strings.ToLower(market + "cet")
+	symbol := strings.ToLower(market + "usdt")
+	if market == SPICE {
+		symbol = strings.ToLower(market + "cet")
+	}
 	route := c.addr + "/v1/market/ticker?market=" + symbol
 	res, err := http.Get(route)
 	if err != nil {
@@ -33,7 +36,11 @@ func (c CoinexExchange) QueryPrice(market string) (string, error) {
 	if data.Code != 0 || data.Message != "OK" {
 		return "", fmt.Errorf("查询价格失败")
 	}
-	return data.Data.Ticker.Last + " cet", nil
+	price := data.Data.Ticker.Last + " usdt"
+	if market == SPICE {
+		price = data.Data.Ticker.Last + " cet"
+	}
+	return fmt.Sprintf("\n%s 价格 : %s\n", market, price), nil
 }
 
 type CoinexResult struct {

@@ -84,8 +84,6 @@ func (i IfWallet) GetAmountOfDenoms(credentialID string, denom string) (string, 
 	data["tokens_id_hex"] = []string{denomID}
 	bz, _ := json.Marshal(data)
 	fmt.Println("send money bz : ", string(bz))
-	fmt.Println("send money bz : ", len(string(bz)))
-	//fmt.Println("unicode size : ", len(toUnicode(string(bz))))
 	res, err := i.sendRequest(url, bytes.NewBuffer(bz))
 	if err != nil {
 		return "", -1, err
@@ -133,15 +131,13 @@ func (i *IfWallet) sendRequest(route string, body io.Reader) (*IFResponse, error
 		return nil, err
 	}
 	i.fillReqHeader(req.Header)
+	log.Info(req.Header)
+	log.Info(req.Body)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	fmt.Println(req.Header)
-	fmt.Println(req.Body)
-
 	bz, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorf("read data from wallet response failed : %s\n", err.Error())
