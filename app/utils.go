@@ -34,9 +34,6 @@ func getHelpMsg(app *RobotApp) string {
 	if app != nil {
 		helpMsg += app.advert
 	}
-
-	//return url.QueryEscape(helpMsg)
-	//return toUnicode(helpMsg)
 	return helpMsg
 }
 
@@ -64,17 +61,6 @@ func responseWeChat(url string, msg []byte) error {
 	log.Infof("receive response : %s\n", bz)
 	return nil
 }
-
-//func queryTokenPrice(app *RobotApp, msg string) string {
-//	if denom := getCoinDenomFromMsg(msg); denom != "" {
-//		price, err := app.exchange.QueryPrice(denom)
-//		if err == nil {
-//			return getPriceMsg(denom, price)
-//		}
-//		return err.Error()
-//	}
-//	return "无效的币种"
-//}
 
 //入群 - 机器人邀请进群
 //[语法：进群]
