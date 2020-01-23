@@ -23,4 +23,5 @@ const (
 	BUYTOKEN = "确认买币" //个人；需要从钱包方直接将币转给用户
 	HELP     = "=帮助"
 	ADVERT   = "=广告"
+	BALANCE  = "=余额"
 )

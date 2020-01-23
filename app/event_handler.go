@@ -36,6 +36,18 @@ func handler(app *RobotApp) http.HandlerFunc {
 	}
 }
 
+func getBalanceAndAddr(app *RobotApp, news AssemblyMsg) []byte {
+	walletID, err := getOrCreateWalletForUser(app, news.getSendWeChatID())
+	if err != nil {
+		return news.groupResMsg(PrivateChatType, "未查询到余额信息")
+	}
+	addr, amount, err := app.wallet.GetAmountOfDenoms(walletID, exchanges.SPICE)
+	if err != nil {
+		return news.groupResMsg(PrivateChatType, "未查询到余额信息")
+	}
+	return news.groupResMsg(PrivateChatType, fmt.Sprintf("余额 : %d;\n 地址：%s\n", amount, addr))
+}
+
 func handlerPrivateChatMsg(w http.ResponseWriter, news *privNews, app *RobotApp, fn ResponseFunc) {
 	var resMsg []byte
 	if strings.HasPrefix(news.recvMsg, BUYTOKEN) {
@@ -48,6 +60,8 @@ func handlerPrivateChatMsg(w http.ResponseWriter, news *privNews, app *RobotApp,
 		}
 	} else if strings.HasPrefix(news.recvMsg, ADVERT) {
 		resMsg = getAdvert(app, news)
+	} else if strings.HasPrefix(news.recvMsg, BALANCE) {
+		resMsg = getBalanceAndAddr(app, news)
 	}
 	if len(resMsg) > 0 {
 		if err := Retry(3, 3, func() error {
@@ -88,6 +102,10 @@ func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn R
 		resMsg = queryPrice(app, news)
 	} else if strings.HasPrefix(news.revMsg, ADVERT) {
 		resMsg = getAdvert(app, news)
+	} else if strings.HasPrefix(news.revMsg, BALANCE) {
+		if _, ok := news.atWeChatIDS[news.robotID]; ok {
+			resMsg = getBalanceAndAddr(app, news)
+		}
 	}
 	if len(resMsg) > 0 {
 		retryReq(func() error {

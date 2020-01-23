@@ -31,6 +31,7 @@ const (
 type AssemblyMsg interface {
 	groupResMsg(msgType int, resMsg string) []byte
 	getMsg() string
+	getSendWeChatID() string
 }
 
 type privNews struct {
@@ -51,6 +52,10 @@ func (b *privNews) getNewsFromRequest(r *http.Request) {
 
 func (b *privNews) getMsg() string {
 	return b.recvMsg
+}
+
+func (b *privNews) getSendWeChatID() string {
+	return b.sendMsgWeChatID
 }
 
 func (b *privNews) groupResMsg(msgType int, resMsg string) []byte {
@@ -90,6 +95,10 @@ func (g *GroupMsg) getGroupMsg(r *http.Request) {
 	g.atWeChatIDS = getAtWeChatMsgs(r.PostForm.Get(MsgKey))
 }
 
+func (g *GroupMsg) getSendWeChatID() string {
+	return g.sendMsgWeChatID
+}
+
 func (g *GroupMsg) groupResMsg(typeKey int, msg string) []byte {
 	data := make(map[string]interface{})
 	data[TypeKey] = typeKey
@@ -110,8 +119,8 @@ func (g *GroupMsg) groupResMsg(typeKey int, msg string) []byte {
 	return bz
 }
 
-func (b *GroupMsg) getMsg() string {
-	return b.revMsg
+func (g *GroupMsg) getMsg() string {
+	return g.revMsg
 }
 
 //
