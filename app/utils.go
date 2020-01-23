@@ -29,6 +29,9 @@ func getHelpMsg(app *RobotApp) string {
 		帮助 - 获取机器人的帮助信息
 				[语法：=帮助]
 
+		余额 - 查询余额
+				[语法：=余额]
+
 		广告 - [语法：=广告]
 				`
 	return helpMsg
