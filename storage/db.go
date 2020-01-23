@@ -7,6 +7,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -20,8 +21,9 @@ import (
 // key : O + accountID + denom + time(big endian); value : amount
 
 type GoLevelDB struct {
-	db    *leveldb.DB
-	batch *leveldb.Batch
+	db      *leveldb.DB
+	batch   *leveldb.Batch
+	dbMutex sync.RWMutex
 }
 
 func NewDB(config string) DB {
@@ -30,12 +32,15 @@ func NewDB(config string) DB {
 		panic(fmt.Sprintf("failed to open db %s\n", config))
 	}
 	return &GoLevelDB{
-		db:    db,
-		batch: new(leveldb.Batch),
+		db:      db,
+		batch:   new(leveldb.Batch),
+		dbMutex: sync.RWMutex{},
 	}
 }
 
 func (g *GoLevelDB) GetUserWalletKeyID(weChatID string) (string, error) {
+	g.dbMutex.RLock()
+	defer g.dbMutex.RUnlock()
 	key := generateWalletIDKey(weChatID)
 	val, err := g.db.Get(key, nil)
 	if err != nil {
@@ -45,6 +50,8 @@ func (g *GoLevelDB) GetUserWalletKeyID(weChatID string) (string, error) {
 }
 
 func (g *GoLevelDB) PutUserWalletKeyID(weChatID string, walletID string) error {
+	g.dbMutex.Lock()
+	defer g.dbMutex.Unlock()
 	key := generateWalletIDKey(weChatID)
 	return g.db.Put(key, []byte(walletID), nil)
 }
@@ -57,6 +64,8 @@ func generateWalletIDKey(weChatID string) []byte {
 }
 
 func (g *GoLevelDB) GetUserDenomAddrInWallet(weChatID, walletID, denom string) (string, error) {
+	g.dbMutex.RLock()
+	defer g.dbMutex.RUnlock()
 	key := generateDenomAddrKey(weChatID, walletID, denom)
 	val, err := g.db.Get(key, nil)
 	if err != nil {
@@ -66,6 +75,8 @@ func (g *GoLevelDB) GetUserDenomAddrInWallet(weChatID, walletID, denom string) (
 }
 
 func (g *GoLevelDB) PutUserDenomAddrInWallet(weChatID, walletID, denom string, addr string) error {
+	g.dbMutex.Lock()
+	defer g.dbMutex.Unlock()
 	key := generateDenomAddrKey(weChatID, walletID, denom)
 	return g.db.Put(key, []byte(addr), nil)
 }
