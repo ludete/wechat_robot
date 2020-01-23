@@ -76,6 +76,7 @@ func (app *RobotApp) initAdvertMsg(cfg *toml.Tree) error {
 		return err
 	}
 	app.advert = strings.Split(string(bz), "\n")
+	return nil
 }
 
 func (app *RobotApp) readCoinSymbols(cfg *toml.Tree) error {

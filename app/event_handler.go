@@ -106,10 +106,10 @@ func getAdvert(app *RobotApp, news AssemblyMsg) []byte {
 	if err != nil {
 		return nil
 	}
-	if num >= len(app.advert) {
+	if num > len(app.advert) || num <= 0 {
 		return nil
 	}
-	return news.groupResMsg(ResGroupChatType, app.advert[num])
+	return news.groupResMsg(ResGroupChatType, app.advert[num-1])
 }
 
 func tipToken(app *RobotApp, news *GroupMsg) []byte {
