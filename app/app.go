@@ -51,8 +51,8 @@ func NewRobotApp(cfg *toml.Tree) (*RobotApp, error) {
 	httpSvr := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.GetDefault("port", 9789).(int64)),
 		Handler:      router,
-		ReadTimeout:  READTIMEOUT * time.Second,
-		WriteTimeout: (WRITETIMEOUT * 4) * time.Second,
+		ReadTimeout:  READTIMEOUT * 20 * time.Second,
+		WriteTimeout: WRITETIMEOUT * 20 * time.Second,
 	}
 	app.server = httpSvr
 	if err := app.readCoinSymbols(cfg); err != nil {

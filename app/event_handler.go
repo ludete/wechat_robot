@@ -81,9 +81,7 @@ func handlerReceiveTransfer(w http.ResponseWriter, news *privNews, app *RobotApp
 func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 	var resMsg []byte
 	if strings.HasPrefix(news.revMsg, HELP) {
-		if _, ok := news.atWeChatIDS[news.robotID]; ok {
-			resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
-		}
+		resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
 	} else if strings.HasPrefix(news.revMsg, TIPS) {
 		resMsg = tipToken(app, news)
 	} else if _, ok := app.coins[strings.ToLower(news.revMsg)]; ok {
@@ -91,9 +89,7 @@ func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn R
 	} else if strings.HasPrefix(news.revMsg, ADVERT) {
 		resMsg = getAdvert(app, news)
 	} else if strings.HasPrefix(news.revMsg, BALANCE) {
-		if _, ok := news.atWeChatIDS[news.robotID]; ok {
-			resMsg = getBalanceAndAddr(app, news)
-		}
+		resMsg = getBalanceAndAddr(app, news)
 	}
 	if len(resMsg) > 0 {
 		retryReq(func() error {
@@ -120,14 +116,14 @@ func getBalanceAndAddr(app *RobotApp, news AssemblyMsg) []byte {
 }
 
 func getAdvert(app *RobotApp, news AssemblyMsg) []byte {
-	num, err := strconv.Atoi(strings.TrimPrefix(news.getMsg(), ADVERT))
+	num, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(news.getMsg(), ADVERT)))
 	if err != nil {
 		return nil
 	}
 	if num > len(app.advert) || num <= 0 {
 		return nil
 	}
-	return news.groupResMsg(ResGroupChatType, app.advert[num-1])
+	return news.groupResMsg(ResGroupChatType, app.advert[(num-1)%len(app.advert)])
 }
 
 func tipToken(app *RobotApp, news *GroupMsg) []byte {
