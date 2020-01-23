@@ -27,7 +27,9 @@ func TestGetRealMsg(t *testing.T) {
 	msg = getRealMsg(msg)
 	require.EqualValues(t, "帮助   帮助 haha", msg)
 
-	msg = "=打赏 @[@emoji=\u7E24][@emoji=\u3006]、[@emoji=\u7444]   66"
+	msg = "==帮助"
+	msg = getRealMsg(msg)
+	require.EqualValues(t, "==帮助", msg)
 }
 
 func TestGetAtMsg(t *testing.T) {
@@ -50,4 +52,8 @@ func TestGetAtMsg(t *testing.T) {
 	require.EqualValues(t, "数字货币机器人1", data["wxid_xno0ahdy95zg121"])
 	require.EqualValues(t, "数字货币机器人2", data["wxid_xno0ahdy95zg122"])
 	require.EqualValues(t, "数字货币机器人3", data["wxid_xno0ahdy95zg1233"])
+
+	msg = "==帮助"
+	data = getAtWeChatMsgs(msg)
+	require.EqualValues(t, 0, len(data))
 }

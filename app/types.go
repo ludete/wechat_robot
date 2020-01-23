@@ -104,6 +104,33 @@ func (g *GroupMsg) groupResMsg(typeKey int, msg string) []byte {
 	return bz
 }
 
+//
+//func getRealByteMsg(msg []byte) []byte {
+//	if bytes.Contains([]byte(msg), []byte("[at")) {
+//		index := bytes.Index([]byte(msg), []byte("[@at,"))
+//		if index < 0 {
+//			return bytes.TrimSpace([]byte(msg))
+//			//return strings.TrimSpace(msg)
+//		}
+//		return bytes.TrimSpace([]byte(msg[:index]))
+//	}
+//	msg = trimAtWeChatByteMsg(bytes.TrimSpace([]byte(msg)))
+//	return getRealByteMsg(msg)
+//}
+
+//func trimAtWeChatByteMsg(msg []byte) []byte {
+//	begin := bytes.Index(msg, []byte("[@at,"))
+//	end := bytes.Index(msg, []byte("]"))
+//	ret := make([]byte, 0, len(msg))
+//	if begin > 0 {
+//		ret = append(ret, msg[:begin]...)
+//	}
+//	if end > 0 {
+//		ret = append(ret, msg[end+1:]...)
+//	}
+//	return bytes.TrimSpace(ret)
+//}
+
 func getRealMsg(msg string) string {
 	if !strings.Contains(msg, "[@at,") {
 		index := strings.Index(msg, "[@at,")
@@ -118,8 +145,15 @@ func getRealMsg(msg string) string {
 
 func trimAtWeChatMsg(msg string) string {
 	begin := strings.Index(msg, "[@at,")
+	var ret string
+	if begin > 0 {
+		ret = msg[:begin]
+	}
 	end := strings.Index(msg, "]")
-	return strings.TrimSpace(msg[:begin] + msg[end+1:])
+	if end > 0 {
+		ret += msg[end+1:]
+	}
+	return strings.TrimSpace(ret)
 }
 
 func getAtWeChatMsgs(msg string) map[string]string {
