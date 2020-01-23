@@ -36,18 +36,6 @@ func handler(app *RobotApp) http.HandlerFunc {
 	}
 }
 
-func getBalanceAndAddr(app *RobotApp, news AssemblyMsg) []byte {
-	walletID, err := getOrCreateWalletForUser(app, news.getSendWeChatID())
-	if err != nil {
-		return news.groupResMsg(PrivateChatType, "未查询到余额信息")
-	}
-	addr, amount, err := app.wallet.GetAmountOfDenoms(walletID, exchanges.SPICE)
-	if err != nil {
-		return news.groupResMsg(PrivateChatType, "未查询到余额信息")
-	}
-	return news.groupResMsg(PrivateChatType, fmt.Sprintf("余额 : %d;\n 地址：%s\n", amount, addr))
-}
-
 func handlerPrivateChatMsg(w http.ResponseWriter, news *privNews, app *RobotApp, fn ResponseFunc) {
 	var resMsg []byte
 	if strings.HasPrefix(news.recvMsg, BUYTOKEN) {
@@ -117,6 +105,18 @@ func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn R
 		})
 	}
 	return
+}
+
+func getBalanceAndAddr(app *RobotApp, news AssemblyMsg) []byte {
+	walletID, err := getOrCreateWalletForUser(app, news.getSendWeChatID())
+	if err != nil {
+		return news.groupResMsg(PrivateChatType, "未查询到余额信息")
+	}
+	addr, amount, err := app.wallet.GetAmountOfDenoms(walletID, exchanges.SPICE)
+	if err != nil {
+		return news.groupResMsg(PrivateChatType, "未查询到余额信息")
+	}
+	return news.groupResMsg(PrivateChatType, fmt.Sprintf("余额 : %d;\n 地址：%s\n", amount, addr))
 }
 
 func getAdvert(app *RobotApp, news AssemblyMsg) []byte {
