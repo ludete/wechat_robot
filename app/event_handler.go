@@ -74,43 +74,56 @@ func handlerReceiveTransfer(w http.ResponseWriter, news *privNews, app *RobotApp
 func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn ResponseFunc) {
 	var resMsg []byte
 	if strings.HasPrefix(news.revMsg, HELP) {
-		// 如果at 了机器人; 进行帮助信息的回复
 		if _, ok := news.atWeChatIDS[news.robotID]; ok {
 			resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
 		}
 	} else if strings.HasPrefix(news.revMsg, TIPS) {
-		log.Info(news)
-		resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
-		// 从发送信息的人的账户， 打赏 at的所有人，一定数量的金额
-		msg := strings.TrimSpace(strings.Trim(news.revMsg, TIPS))
-		if amount, err := strconv.Atoi(msg); err == nil {
-			if txid, err := tipDenomToPeoples(app, exchanges.SPICE, amount, news); err == nil {
-				resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
-			} else {
-				resMsg = news.groupResMsg(PrivateChatType, err.Error())
-			}
-		} else {
-			resMsg = news.groupResMsg(ResGroupChatType, "格式错误")
-		}
+		resMsg = tipToken(app, news)
 	} else if _, ok := app.coins[strings.ToLower(news.revMsg)]; ok {
-		price, err := app.exchange.QueryPrice(news.revMsg)
-		if err == nil {
-			resMsg = news.groupResMsg(ResGroupChatType, price)
-		}
+		resMsg = queryPrice(app, news)
 	}
 	if len(resMsg) != 0 {
-		log.Info("response wechat msg : ", string(resMsg))
-		if err := Retry(3, 3, func() error {
-			lenth, err := w.Write(resMsg)
-			if lenth != len(resMsg) {
-				log.Errorf("write response to client failed; the length is not match, expect : %d, actual : %d", len(resMsg), lenth)
+		retryReq(func() error {
+			length, err := w.Write(resMsg)
+			if length != len(resMsg) {
+				log.Errorf("write response to client failed; the length is not match, expect : %d, actual : %d", len(resMsg), length)
 			}
 			return err
-		}); err != nil {
-			log.Errorf("回复群消息失败")
-		}
+		})
 	}
 	return
+}
+
+func tipToken(app *RobotApp, news *GroupMsg) []byte {
+	var resMsg []byte
+	log.Info(news)
+	resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
+	// 从发送信息的人的账户， 打赏 at的所有人，一定数量的金额
+	msg := strings.TrimSpace(strings.Trim(news.revMsg, TIPS))
+	if amount, err := strconv.Atoi(msg); err == nil {
+		if txid, err := tipDenomToPeoples(app, exchanges.SPICE, amount, news); err == nil {
+			resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
+		} else {
+			resMsg = news.groupResMsg(PrivateChatType, err.Error())
+		}
+	} else {
+		resMsg = news.groupResMsg(ResGroupChatType, "格式错误")
+	}
+	return resMsg
+}
+
+func queryPrice(app *RobotApp, news *GroupMsg) []byte {
+	price, err := app.exchange.QueryPrice(news.revMsg)
+	if err == nil {
+		return news.groupResMsg(ResGroupChatType, price)
+	}
+	return nil
+}
+
+func retryReq(fn func() error) {
+	if err := Retry(3, 3, fn); err != nil {
+		log.Errorf("回复群消息失败")
+	}
 }
 
 func handlerGroupInvite(w http.ResponseWriter, news *privNews, app *RobotApp, fn ResponseFunc) {
