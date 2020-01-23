@@ -28,6 +28,11 @@ const (
 	AtWeChatNickName = "at_name"
 )
 
+type AssemblyMsg interface {
+	groupResMsg(msgType int, resMsg string) []byte
+	getMsg() string
+}
+
 type privNews struct {
 	typeKey int
 
@@ -42,6 +47,10 @@ func (b *privNews) getNewsFromRequest(r *http.Request) {
 	b.receiveMsgWeChatID = r.PostForm.Get(ReceiveMsgIDKey)
 	b.recvMsg = r.PostForm.Get(MsgKey)
 	return
+}
+
+func (b *privNews) getMsg() string {
+	return b.recvMsg
 }
 
 func (b *privNews) groupResMsg(msgType int, resMsg string) []byte {
@@ -99,6 +108,10 @@ func (g *GroupMsg) groupResMsg(typeKey int, msg string) []byte {
 	}
 	bz = []byte(toUnicode(string(bz)))
 	return bz
+}
+
+func (b *GroupMsg) getMsg() string {
+	return b.revMsg
 }
 
 //

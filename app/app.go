@@ -26,8 +26,7 @@ type RobotApp struct {
 	server   *http.Server
 	exchange exchanges.Exchange
 	wallet   wallets.WalletInterface
-	advert   string
-	resURL   string
+	advert   []string
 	coins    map[string]struct{}
 }
 
@@ -45,8 +44,7 @@ func NewRobotApp(cfg *toml.Tree) (*RobotApp, error) {
 			cfg.GetDefault("apikey", "").(string),
 			cfg.GetDefault("secretkey", "").(string),
 		),
-		resURL: cfg.GetDefault("proxy", "").(string),
-		coins:  make(map[string]struct{}, 300),
+		coins: make(map[string]struct{}, 300),
 	}
 
 	router := registerHandler(app)
@@ -57,8 +55,27 @@ func NewRobotApp(cfg *toml.Tree) (*RobotApp, error) {
 		WriteTimeout: (WRITETIMEOUT * 4) * time.Second,
 	}
 	app.server = httpSvr
-	err := app.readCoinSymbols(cfg)
-	return app, err
+	if err := app.readCoinSymbols(cfg); err != nil {
+		return nil, err
+	}
+	if err := app.initAdvertMsg(cfg); err != nil {
+		return nil, err
+	}
+	return app, nil
+}
+
+func (app *RobotApp) initAdvertMsg(cfg *toml.Tree) error {
+	advertFile := cfg.GetDefault("advert_file", "").(string)
+	file, err := os.Open(advertFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	bz, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+	app.advert = strings.Split(string(bz), "\n")
 }
 
 func (app *RobotApp) readCoinSymbols(cfg *toml.Tree) error {

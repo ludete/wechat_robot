@@ -42,17 +42,21 @@ func handlerPrivateChatMsg(w http.ResponseWriter, news *privNews, app *RobotApp,
 		resMsg = buyTokens(app, news)
 	} else if strings.HasPrefix(news.recvMsg, HELP) {
 		resMsg = news.groupResMsg(PrivateChatType, getHelpMsg(app))
-	} else {
+	} else if _, ok := app.coins[strings.ToLower(news.recvMsg)]; ok {
 		if price, err := app.exchange.QueryPrice(news.recvMsg); err == nil {
 			resMsg = news.groupResMsg(PrivateChatType, price)
 		}
+	} else if strings.HasPrefix(news.recvMsg, ADVERT) {
+		resMsg = getAdvert(app, news)
 	}
-	if err := Retry(3, 3, func() error {
-		_, errT := w.Write(resMsg)
-		return errT
-	}); err != nil {
-		log.Errorf("response private msg failed : %s\n", err.Error())
-		return
+	if len(resMsg) > 0 {
+		if err := Retry(3, 3, func() error {
+			_, errT := w.Write(resMsg)
+			return errT
+		}); err != nil {
+			log.Errorf("response private msg failed : %s\n", err.Error())
+			return
+		}
 	}
 }
 
@@ -82,8 +86,10 @@ func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn R
 		resMsg = tipToken(app, news)
 	} else if _, ok := app.coins[strings.ToLower(news.revMsg)]; ok {
 		resMsg = queryPrice(app, news)
+	} else if strings.HasPrefix(news.revMsg, ADVERT) {
+		resMsg = getAdvert(app, news)
 	}
-	if len(resMsg) != 0 {
+	if len(resMsg) > 0 {
 		retryReq(func() error {
 			length, err := w.Write(resMsg)
 			if length != len(resMsg) {
@@ -93,6 +99,17 @@ func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn R
 		})
 	}
 	return
+}
+
+func getAdvert(app *RobotApp, news AssemblyMsg) []byte {
+	num, err := strconv.Atoi(strings.TrimPrefix(news.getMsg(), ADVERT))
+	if err != nil {
+		return nil
+	}
+	if num >= len(app.advert) {
+		return nil
+	}
+	return news.groupResMsg(ResGroupChatType, app.advert[num])
 }
 
 func tipToken(app *RobotApp, news *GroupMsg) []byte {

@@ -31,9 +31,6 @@ func getHelpMsg(app *RobotApp) string {
 
 		广告 - [语法：=广告]
 				`
-	if app != nil {
-		helpMsg += app.advert
-	}
 	return helpMsg
 }
 

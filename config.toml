@@ -28,5 +28,9 @@ coinex = "https://api.coinex.com"
 # coins
 symbols = "symbol.txt"
 
-# response url
-resurl = ""
+# https key
+keyfile = ""
+certfile = ""
+
+# advert file
+advert_file = "advert_file.txt"
