@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,4 +27,10 @@ func TestRetry(t *testing.T) {
 		return nil
 	})
 	require.EqualValues(t, 1, runNum)
+}
+
+func TestTrim(t *testing.T) {
+	msg := "=帮助"
+	data := strings.Trim(msg, msg)
+	fmt.Println(data)
 }

@@ -192,7 +192,6 @@ func getPrivNews(r *http.Request) *privNews {
 }
 
 func getGroupNews(r *http.Request) *GroupMsg {
-	log.Info(r.PostForm)
 	news := new(GroupMsg)
 	news.getGroupMsg(r)
 	return news
@@ -240,12 +239,14 @@ func tipDenomToPeoples(app *RobotApp, denom string, amount int, news *GroupMsg) 
 			Denom:   denom,
 		}
 	}
-
-	txID, err := app.wallet.SendMoney(sendWallet, transfers)
-	if err != nil {
-		return "", err
+	if len(transfers) > 0 {
+		txID, err := app.wallet.SendMoney(sendWallet, transfers)
+		if err != nil {
+			return "", err
+		}
+		return txID, nil
 	}
-	return txID, nil
+	return "", fmt.Errorf("无接收者")
 }
 
 func getOrCreateWalletIDAndAddr(app *RobotApp, weChatID string, denom string) ([]string, error) {
@@ -270,34 +271,32 @@ func getOrCreateWalletForUser(app *RobotApp, weChatID string) (string, error) {
 			sendWalletID, err = app.wallet.CreateUserWallet()
 			return err
 		}); err != nil {
-			log.Errorf("create user wallet failed, err : %s", err.Error())
-			return "", err
+			log.Errorf("创建用户钱包失败, err : %s", err.Error())
+			return "", fmt.Errorf("创建用户钱包失败")
 		}
 
 		if err := app.db.PutUserWalletKeyID(weChatID, sendWalletID); err != nil {
-			log.Errorf("store walletID to db failed; err : %s", err.Error())
-			return "", err
+			log.Errorf("存储用户钱包失败; err : %s", err.Error())
+			return "", fmt.Errorf("创建用户钱包失败")
 		}
 	}
 	return sendWalletID, nil
 }
 
 func getOrCreateDenomAddr(app *RobotApp, walletID, weChatID, denom string) (string, error) {
-	fmt.Printf("begin  walletID : %s\n", walletID)
 	addr, err := app.db.GetUserDenomAddrInWallet(weChatID, walletID, denom)
 	if err != nil {
 		if err = Retry(3, 3, func() error {
-			fmt.Printf("middle walletID : %s\n", walletID)
 			addr, _, err = app.wallet.GetAmountOfDenoms(walletID, denom)
 			return err
 		}); err != nil {
 			log.Errorf("create %s addr failed in wallet, err : %s", denom, err.Error())
-			return "", err
+			return "", fmt.Errorf("获取用户地址失败")
 		}
 
 		if err = app.db.PutUserDenomAddrInWallet(weChatID, walletID, denom, addr); err != nil {
 			log.Errorf("store %s denom addr in db failed, err : %s", denom, err.Error())
-			return "", err
+			return "", fmt.Errorf("获取用户地址失败")
 		}
 	}
 	return addr, nil

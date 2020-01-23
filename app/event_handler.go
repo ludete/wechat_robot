@@ -20,8 +20,6 @@ func handler(app *RobotApp) http.HandlerFunc {
 			log.Errorf(err.Error())
 			return
 		}
-		//w.Write([]byte("hello world"))
-		//return
 		switch key {
 		case PrivateChatType:
 			handlerPrivateChatMsg(w, getPrivNews(r), app, responseWeChat)
@@ -81,14 +79,15 @@ func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn R
 			resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
 		}
 	} else if strings.HasPrefix(news.revMsg, TIPS) {
+		log.Info(news)
 		resMsg = news.groupResMsg(ResGroupChatType, getHelpMsg(app))
 		// 从发送信息的人的账户， 打赏 at的所有人，一定数量的金额
-		datas := strings.Split(news.revMsg, TIPS)
-		if len(datas) == 2 {
-			if amount, err := strconv.Atoi(strings.TrimSpace(datas[1])); err == nil {
-				if txid, err := tipDenomToPeoples(app, exchanges.SPICE, amount, news); err == nil {
-					resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
-				}
+		msg := strings.TrimSpace(strings.Trim(news.revMsg, TIPS))
+		if amount, err := strconv.Atoi(msg); err == nil {
+			if txid, err := tipDenomToPeoples(app, exchanges.SPICE, amount, news); err == nil {
+				resMsg = news.groupResMsg(PrivateChatType, fmt.Sprintf("txid : %s", txid))
+			} else {
+				resMsg = news.groupResMsg(PrivateChatType, err.Error())
 			}
 		} else {
 			resMsg = news.groupResMsg(ResGroupChatType, "格式错误")
@@ -102,7 +101,10 @@ func handlerGroupChat(w http.ResponseWriter, news *GroupMsg, app *RobotApp, fn R
 	if len(resMsg) != 0 {
 		log.Info("response wechat msg : ", string(resMsg))
 		if err := Retry(3, 3, func() error {
-			_, err := w.Write(resMsg)
+			lenth, err := w.Write(resMsg)
+			if lenth != len(resMsg) {
+				log.Errorf("write response to client failed; the length is not match, expect : %d, actual : %d", len(resMsg), lenth)
+			}
 			return err
 		}); err != nil {
 			log.Errorf("回复群消息失败")

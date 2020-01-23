@@ -63,12 +63,13 @@ func (i IfWallet) SendMoney(walletID string, news []TransferNews) (string, error
 	fmt.Printf("send money : %s\n", bz)
 	res, err := i.sendRequest(url, bytes.NewBuffer(bz))
 	if err != nil {
-		return "", err
+		log.Errorf("transfer token request failed : %s\n", err.Error())
+		return "", fmt.Errorf("转账失败")
 	}
 	txid, err := res.GetTxID()
 	if err != nil {
 		log.Errorf("get walletID from create wallet response failed : %s\n", err.Error())
-		return "", err
+		return "", fmt.Errorf("转账失败")
 	}
 	return txid, nil
 }
