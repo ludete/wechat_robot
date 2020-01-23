@@ -20,6 +20,7 @@ func handler(app *RobotApp) http.HandlerFunc {
 			log.Errorf(err.Error())
 			return
 		}
+
 		switch key {
 		case PrivateChatType:
 			handlerPrivateChatMsg(w, getPrivNews(r), app, responseWeChat)
