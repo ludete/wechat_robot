@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ludete/wechat_robot/exchanges"
+	"github.com/robot/wechat_robot/exchanges"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -116,6 +116,9 @@ func getBalanceAndAddr(app *RobotApp, news AssemblyMsg) []byte {
 }
 
 func getAdvert(app *RobotApp, news AssemblyMsg) []byte {
+	if news.getMsg() == ADVERT {
+		return news.groupResMsg(ResGroupChatType, AdvertMsg)
+	}
 	num, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(news.getMsg(), ADVERT)))
 	if err != nil {
 		return nil

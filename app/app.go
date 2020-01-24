@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ludete/wechat_robot/wallets"
+	"github.com/robot/wechat_robot/wallets"
 
-	"github.com/ludete/wechat_robot/exchanges"
+	"github.com/robot/wechat_robot/exchanges"
 
 	"github.com/gorilla/mux"
-	"github.com/ludete/wechat_robot/storage"
 	toml "github.com/pelletier/go-toml"
+	"github.com/robot/wechat_robot/storage"
 	log "github.com/sirupsen/logrus"
 )
 

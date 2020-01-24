@@ -28,11 +28,12 @@ func TestIFWallet(t *testing.T) {
 func TestIfWallet_GetAmountOfDenoms(t *testing.T) {
 	//ad51d596fb56ca992624e182922c627b168974ca578a53adb32a2a6adde1e04d
 	//10507cfa86dc0bfdf9e73b727630f86c5fa21f565f18c560dbdfa458e14b4a1a money
-	ifwallet := NewWallet("http://47.52.172.230:8082",
-		"bc9f49dde58089808ec2837c2efe7310",
-		"6nU95IhOWpbymIWvVibiNyfTEblfqkDD0TbXIVEfD30=")
+	//https://api2.ifwallet.com/h5_open/hd_wallet/slp/balance
+	ifwallet := NewWallet("https://api2.ifwallet.com",
+		"bb42979c22b37b9ba5f1def23f806051",
+		"el5B8CnhPTxA-7mh4f15G_v9uEs6Uw5h3gyJxonnVH0=")
 	addr, balance, err := ifwallet.GetAmountOfDenoms(
-		"10507cfa86dc0bfdf9e73b727630f86c5fa21f565f18c560dbdfa458e14b4a1a", "spice")
+		"ecf301589599ab040106b1ecf00a8be41995fd01800cc7033f95204e556a09dc", "spice")
 	require.Nil(t, err)
 	fmt.Printf("addr : %s, balance : %d \n", addr, balance)
 

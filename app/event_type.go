@@ -25,3 +25,5 @@ const (
 	ADVERT   = "=广告"
 	BALANCE  = "=余额"
 )
+
+const AdvertMsg = "\n此广告位招商，广告费的50%将用于二级市场回购SPICE销毁"

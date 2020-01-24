@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ludete/wechat_robot/app"
-	"github.com/ludete/wechat_robot/util"
+	"github.com/robot/wechat_robot/app"
+	"github.com/robot/wechat_robot/util"
 
 	log "github.com/sirupsen/logrus"
 )

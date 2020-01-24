@@ -1,4 +1,4 @@
-module github.com/ludete/wechat_robot
+module github.com/robot/wechat_robot
 
 go 1.13
 

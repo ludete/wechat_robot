@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ludete/wechat_robot/wallets"
+	"github.com/robot/wechat_robot/wallets"
 
 	"github.com/syndtr/goleveldb/leveldb"
 
