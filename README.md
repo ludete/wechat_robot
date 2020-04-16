@@ -1,4 +1,7 @@
+![webchat_robot](https://github.com/ludete/wechat_robot/workflows/webchat_robot/badge.svg)
+
 # 微信机器人
+
 
 ## 支持的功能
 
